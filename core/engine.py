@@ -6,8 +6,6 @@ from core.narrator import Narrator
 from core.translations import get_text
 
 class ActivityEngine:
-    """Motor completo con soporte de voz para respuestas."""
-
     def __init__(self, page: ft.Page, activity: dict, on_finish, lang: str = "es"):
         self.page = page
         self.data = activity
@@ -16,20 +14,16 @@ class ActivityEngine:
         self.lang_code = "es-ES" if lang == "es" else "en-US"
         self.is_listening = False
 
-        # 🔊 Audio oculto
         self.audio = ft.Audio(src="", autoplay=False, on_loaded=lambda _: None)
         page.overlay.append(self.audio)
 
         self.narrator = Narrator(lang=lang, on_text=self._show_subtitle)
         self.narrator.set_page(page)
 
-        #  Elementos UI
         self.subtitle = ft.Text("", size=22, italic=True, color=ft.Colors.BLUE_GREY_700, text_align=ft.TextAlign.CENTER, width=600)
         self.objects_view = ft.Row(wrap=True, spacing=8, alignment=ft.MainAxisAlignment.CENTER)
         self.feedback = ft.Text("", size=36, weight=ft.FontWeight.BOLD)
         self.confetti_layer = ft.Stack(expand=True)
-        
-        # ️ Campo oculto para voz
         self.voice_input = ft.TextField(visible=False, on_change=self._process_voice_answer)
 
     def build(self) -> ft.Control:
@@ -62,6 +56,7 @@ class ActivityEngine:
         elif isinstance(narration, dict) and "es" in narration:
             narration = narration["es"]
 
+        # Paso 1: Mostrar objetos
         if op in ("+", "-"):
             self._render_objects(self.data["total"])
         elif op == "×":
@@ -69,10 +64,11 @@ class ActivityEngine:
         elif op == "÷":
             self._render_objects(self.data["total"])
 
-        await self._wait(300)
+        await self._wait(500)
         await self._speak(narration.get("intro", ""))
         await self._wait(500)
 
+        # Paso 2: ANIMACIÓN
         if op == "-":
             await self._animate_remove(self.data["remove"])
         elif op == "+":
@@ -83,10 +79,8 @@ class ActivityEngine:
             await self._animate_divide(self.data["divisor"])
 
         await self._speak(narration.get("action", ""))
-        await self._wait(400)
+        await self._wait(500)
         await self._speak(narration.get("question", ""))
-
-    # ---------- Render ----------
 
     def _reset(self):
         self.objects_view.controls = []
@@ -95,127 +89,104 @@ class ActivityEngine:
         self.confetti_layer.controls = []
         self.page.update()
 
-    def _make_emoji(self, emoji: str, size: int = 48) -> ft.Text:
-        return ft.Text(emoji, size=size,
-                       font_family="Segoe UI Emoji",  # Fuente con soporte emoji en Windows 
-                       animate_opacity=ft.Animation(400),
-                       animate_scale=ft.Animation(400),
-                       animate_offset=ft.Animation(500))
+    def _make_emoji(self, emoji: str, size: int = 40) -> ft.Image:
+        emoji_codes = {
+            "🍎": "1f34e", "🍕": "1f355", "🚗": "1f697", "🚕": "1f695",
+            "🐟": "1f41f", "🐶": "1f436", "⭐": "2b50", "🎈": "1f388",
+            "📚": "1f4da", "🎒": "1f392", "✏️": "270f", "📐": "1f4d0",
+            "️": "1f58d", "": "1f3c6", "": "1f36a", "": "1f36c",
+            "🌸": "1f338", "👩🦰": "1f469-1f3fb-200d-1f9b0"
+        }
+        code = emoji_codes.get(emoji, "1f34e")
+        url = f"https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/{code}.svg"
+        return ft.Image(src=url, width=size, height=size, fit=ft.ImageFit.CONTAIN, animate_scale=ft.Animation(400))
 
     def _render_objects(self, count: int):
-        self.objects_view.controls = []
-        
-        if count < 10:
-            self.objects_view.controls = [
-                self._make_emoji(self.data["emoji"]) for _ in range(count)
-            ]
-        else:
-            tens = count // 10
-            units = count % 10
-            main_container = ft.Row(wrap=True, spacing=10, alignment=ft.MainAxisAlignment.CENTER)
-            
-            for i in range(tens):
-                ten_group = ft.Container(
-                    content=ft.Row([self._make_emoji(self.data["emoji"], size=32) for _ in range(10)], spacing=2, wrap=True),
-                    border=ft.border.all(2, ft.Colors.BLUE),
-                    border_radius=10,
-                    padding=8,
-                    bgcolor=ft.Colors.BLUE_50,
-                )
-                main_container.controls.append(ten_group)
-            
-            if units > 0:
-                units_container = ft.Container(
-                    content=ft.Row([self._make_emoji(self.data["emoji"], size=32) for _ in range(units)], spacing=2),
-                    border=ft.border.all(2, ft.Colors.ORANGE),
-                    border_radius=10,
-                    padding=8,
-                    bgcolor=ft.Colors.ORANGE_50,
-                )
-                main_container.controls.append(units_container)
-            
-            self.objects_view.controls.append(main_container)
-        
+        self.objects_view.controls.clear()
+        for _ in range(count):
+            self.objects_view.controls.append(self._make_emoji(self.data["emoji"]))
         self.page.update()
 
     def _render_groups(self, groups: int, per_group: int):
-        self.objects_view.controls = []
-        for i in range(groups):
-            group_container = ft.Container(
-                content=ft.Row([self._make_emoji(self.data["emoji"], size=35) for _ in range(per_group)], spacing=3, wrap=True),
-                border=ft.border.all(2, ft.Colors.GREEN),
-                border_radius=10,
-                padding=8,
-                bgcolor=ft.Colors.GREEN_50,
-            )
-            self.objects_view.controls.append(group_container)
+        self.objects_view.controls.clear()
+        for _ in range(groups):
+            group = ft.Row([self._make_emoji(self.data["emoji"], size=35) for _ in range(per_group)], spacing=3)
+            self.objects_view.controls.append(group)
         self.page.update()
 
-    # ---------- Animaciones ----------
-
     async def _animate_remove(self, n: int):
+        """Anima la remoción de objetos."""
         controls = self.objects_view.controls
-        # Si hay contenedores de decenas/unidades, aplanar
-        all_objects = []
-        for c in controls:
-            if isinstance(c, ft.Container) and isinstance(c.content, ft.Row):
-                all_objects.extend(c.content.controls)
-            elif isinstance(c, ft.Text):
-                all_objects.append(c)
+        to_remove = controls[-n:] if len(controls) >= n else controls
         
-        to_remove = all_objects[-n:] if len(all_objects) >= n else all_objects
         for obj in to_remove:
-            obj.opacity = 0.2
-            obj.scale = 0.4
+            obj.scale = 0.5
+            obj.opacity = 0.3
             self.page.update()
-            await self._wait(200)
+            await self._wait(300)
+        
+        # Remover del todo
+        for obj in to_remove:
+            if obj in self.objects_view.controls:
+                self.objects_view.controls.remove(obj)
+        self.page.update()
 
     async def _animate_add(self, n: int):
-        for _ in range(n):
+        """Anima la adición de objetos."""
+        for i in range(n):
             new_obj = self._make_emoji(self.data["emoji"])
             new_obj.scale = 0
             self.objects_view.controls.append(new_obj)
             self.page.update()
-            await self._wait(50)
+            await self._wait(100)
+            
+            # Animar crecimiento
+            new_obj.scale = 1.2
+            self.page.update()
+            await self._wait(200)
             new_obj.scale = 1
             self.page.update()
-            await self._wait(250)
 
     async def _animate_multiply(self):
+        """Resalta cada grupo."""
         for group in self.objects_view.controls:
-            if isinstance(group, ft.Container) and isinstance(group.content, ft.Row):
-                for obj in group.content.controls:
+            if isinstance(group, ft.Row):
+                for obj in group.controls:
                     obj.scale = 1.3
                 self.page.update()
-                await self._wait(350)
-                for obj in group.content.controls:
+                await self._wait(400)
+                for obj in group.controls:
                     obj.scale = 1
                 self.page.update()
 
     async def _animate_divide(self, divisor: int):
-        total = self.data["total"]
-        self.objects_view.controls = []
+        """Anima la división en grupos."""
+        total = len(self.objects_view.controls)
+        self.objects_view.controls.clear()
+        
+        # Crear contenedores vacíos
+        containers = []
         for i in range(divisor):
-            group = ft.Container(
+            container = ft.Container(
                 content=ft.Row(spacing=3, wrap=True),
                 border=ft.border.all(2, ft.Colors.PURPLE),
                 border_radius=10,
-                padding=8,
+                padding=10,
                 bgcolor=ft.Colors.PURPLE_50,
+                width=100
             )
-            self.objects_view.controls.append(group)
+            containers.append(container)
+            self.objects_view.controls.append(container)
         self.page.update()
-
+        
+        # Distribuir objetos
         objs = [self._make_emoji(self.data["emoji"]) for _ in range(total)]
         for i, obj in enumerate(objs):
             group_idx = i % divisor
-            group_container = self.objects_view.controls[group_idx]
-            if isinstance(group_container.content, ft.Row):
-                group_container.content.controls.append(obj)
+            if isinstance(containers[group_idx].content, ft.Row):
+                containers[group_idx].content.controls.append(obj)
             self.page.update()
-            await self._wait(120)
-
-    # ---------- UI de respuesta ----------
+            await self._wait(200)
 
     def _build_options(self) -> ft.Control:
         col = ft.Column(alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=15)
@@ -259,23 +230,12 @@ class ActivityEngine:
             self.narrator.speak(get_text(self.lang, "almost"))
             self.on_finish(success=False, stars=0)
 
-    # ---------- Confeti ----------
-
     def _launch_confetti(self):
         emojis = ["🎉", "⭐", "🎊", "✨", "🌟"]
         for i in range(15):
-            e = ft.Text(random.choice(emojis), size=32,
-                        top=-50, left=random.randint(20, 500),
-                        animate_offset=ft.Animation(1200),
-                        animate_opacity=ft.Animation(1200))
+            e = ft.Text(random.choice(emojis), size=32, top=-50, left=random.randint(20, 500))
             self.confetti_layer.controls.append(e)
         self.page.update()
-
-        for c in self.confetti_layer.controls:
-            c.offset = ft.transform.Offset(0, 15)
-            c.opacity = 0
-        self.page.update()
-
         self.page.run_task(self._clear_confetti)
 
     async def _clear_confetti(self):
@@ -283,16 +243,14 @@ class ActivityEngine:
         self.confetti_layer.controls = []
         self.page.update()
 
-    # ---------- Voz ----------
-
     def _text_to_number(self, text: str) -> int | None:
         text = text.lower().strip()
         digit_match = re.search(r'\d+', text)
         if digit_match:
             return int(digit_match.group())
         
-        words_es = {"cero":0, "uno":1, "dos":2, "tres":3, "cuatro":4, "cinco":5, "seis":6, "siete":7, "ocho":8, "nueve":9, "diez":10, "once":11, "doce":12, "trece":13, "catorce":14, "quince":15, "dieciseis":16, "diecisiete":17, "dieciocho":18, "diecinueve":19, "veinte":20, "veintiuno":21, "veintidos":22, "veintitres":23, "veinticuatro":24, "veinticinco":25, "veintiseis":26, "veintisiete":27, "veintiocho":28, "veintinueve":29, "treinta":30}
-        words_en = {"zero":0, "one":1, "two":2, "three":3, "four":4, "five":5, "six":6, "seven":7, "eight":8, "nine":9, "ten":10, "eleven":11, "twelve":12, "thirteen":13, "fourteen":14, "fifteen":15, "sixteen":16, "seventeen":17, "eighteen":18, "nineteen":19, "twenty":20, "twenty-one":21, "twenty-two":22, "twenty-three":23, "twenty-four":24, "twenty-five":25, "twenty-six":26, "twenty-seven":27, "twenty-eight":28, "twenty-nine":29, "thirty":30}
+        words_es = {"cero":0, "uno":1, "dos":2, "tres":3, "cuatro":4, "cinco":5, "seis":6, "siete":7, "ocho":8, "nueve":9, "diez":10, "once":11, "doce":12, "trece":13, "catorce":14, "quince":15, "dieciseis":16, "diecisiete":17, "dieciocho":18, "diecinueve":19, "veinte":20, "veintiuno":21, "veintidos":22, "veintitres":23, "veinticuatro":24, "veinticinco":25}
+        words_en = {"zero":0, "one":1, "two":2, "three":3, "four":4, "five":5, "six":6, "seven":7, "eight":8, "nine":9, "ten":10, "eleven":11, "twelve":12, "thirteen":13, "fourteen":14, "fifteen":15, "sixteen":16, "seventeen":17, "eighteen":18, "nineteen":19, "twenty":20, "twenty-one":21, "twenty-two":22, "twenty-three":23, "twenty-four":24, "twenty-five":25}
         
         dictionary = words_es if self.lang == "es" else words_en
         clean_text = re.sub(r'[^\w\s]', '', text)
@@ -328,10 +286,6 @@ class ActivityEngine:
             }}
         }};
         
-        recognition.onerror = (event) => {{
-            console.error('Error de voz:', event.error);
-        }};
-        
         recognition.start();
         """
         self.page.evaluate(js_code)
@@ -352,8 +306,6 @@ class ActivityEngine:
             self.feedback.color = ft.Colors.ORANGE
             self.narrator.speak("No entendí el número. Intenta de nuevo." if self.lang == "es" else "I didn't catch the number. Try again.")
             self.page.update()
-
-    # ---------- Helpers ----------
 
     def _show_subtitle(self, text: str):
         self.subtitle.value = f'"{text}"'
