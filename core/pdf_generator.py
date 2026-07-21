@@ -46,76 +46,92 @@ class PDFGenerator:
         return img_path if img_path.exists() else None
     
     def generate_workbook(self, level: int, output_path: Path, lang: str = "es") -> Path:
-        """Genera PDF con ejercicios de un nivel específico en el idioma seleccionado."""
         activities = [a for a in self.activities if a["level"] == level]
-        
         if not activities:
             raise ValueError(f"No hay actividades para el nivel {level}")
         
         pdf = FPDF()
         pdf.add_page()
         
-        # Título
-        pdf.set_font("Helvetica", "B", 24)
+        # 1. Encabezado colorido
+        pdf.set_fill_color(255, 223, 0) # Amarillo
+        pdf.rect(0, 0, 210, 40, 'F') # Barra superior
+        
+        pdf.set_font("Helvetica", "B", 22)
+        pdf.set_text_color(74, 20, 140) # Índigo
         title = get_text(lang, "workbook_title")
-        pdf.cell(0, 20, f"{title} {level}", ln=True, align="C")
+        pdf.cell(0, 15, f"{title} {level}", ln=True, align="C")
+        
+        # Campo para nombre y fecha
+        pdf.set_font("Helvetica", "", 14)
+        pdf.set_text_color(0, 0, 0)
+        pdf.ln(5)
+        nombre_label = "Nombre:" if lang == "es" else "Name:"
+        fecha_label = "Fecha:" if lang == "es" else "Date:"
+        pdf.cell(90, 10, f"{nombre_label} ________________________", ln=False)
+        pdf.cell(0, 10, f"{fecha_label} ________________", ln=True)
+        
         pdf.ln(10)
         
-        # Subtítulo
-        pdf.set_font("Helvetica", "I", 12)
-        pdf.cell(0, 10, get_text(lang, "workbook_subtitle"), ln=True, align="C")
-        pdf.ln(15)
-        
-        # Ejercicios
-        pdf.set_font("Helvetica", "", 14)
-        for i, activity in enumerate(activities[:10], 1):
+        # 2. Ejercicios
+        pdf.set_font("Helvetica", "B", 16) # Letra más grande para niños
+        for i, activity in enumerate(activities[:8], 1): # 8 ejercicios por página para que queden grandes
             emoji_char = activity["emoji"]
             total = activity["total"]
             operation = activity["operation"]
             
-            emoji_img_path = self._download_emoji_image(emoji_char, size=24)
+            emoji_img_path = self._download_emoji_image(emoji_char, size=30) # Emojis más grandes
             
-            x_start = pdf.get_x()
-            y_start = pdf.get_y()
+            # Color según operación
+            if operation == "+":
+                pdf.set_text_color(0, 128, 0) # Verde para suma
+            elif operation == "-":
+                pdf.set_text_color(200, 0, 0) # Rojo para resta
+            elif operation == "×":
+                pdf.set_text_color(0, 0, 200) # Azul para multiplicación
+            else:
+                pdf.set_text_color(128, 0, 128) # Morado para división
             
-            pdf.cell(10, 15, f"{i}.", ln=False)
+            pdf.cell(15, 20, f"{i}.", ln=False)
             
             if emoji_img_path:
                 try:
-                    pdf.image(emoji_img_path, x=pdf.get_x(), y=y_start + 2, w=10, h=10)
-                    pdf.set_x(pdf.get_x() + 12)
+                    pdf.image(emoji_img_path, x=pdf.get_x(), y=pdf.get_y(), w=15, h=15)
+                    pdf.set_x(pdf.get_x() + 18)
                 except:
-                    pdf.cell(12, 15, "?", ln=False)
+                    pdf.cell(20, 20, " ", ln=False)
             else:
-                pdf.cell(12, 15, "?", ln=False)
+                pdf.cell(20, 20, " ", ln=False)
             
+            # Ecuación grande
             if operation == "-":
-                text = f"{total} - {activity['remove']} = ___"
+                text = f"{total}  -  {activity['remove']}  =  ______"
             elif operation == "+":
-                text = f"{total} + {activity['add']} = ___"
+                text = f"{total}  +  {activity['add']}  =  ______"
             elif operation == "×":
-                text = f"{activity['groups']} × {activity['per_group']} = ___"
+                text = f"{activity['groups']}  ×  {activity['per_group']}  =  ______"
             elif operation == "÷":
-                text = f"{total} ÷ {activity['divisor']} = ___"
-            else:
-                text = "Exercise"
+                text = f"{total}  ÷  {activity['divisor']}  =  ______"
             
-            pdf.cell(0, 15, text, ln=True)
+            pdf.cell(0, 20, text, ln=True)
+            pdf.ln(5)
+            
+            # Línea separadora suave
+            pdf.set_draw_color(200, 200, 200)
+            pdf.line(20, pdf.get_y(), 190, pdf.get_y())
             pdf.ln(8)
-            
-            if i % 5 == 0:
-                pdf.ln(5)
         
-        # Pie de página
+        # 3. Pie de página divertido
         pdf.set_y(-20)
         pdf.set_font("Helvetica", "I", 10)
-        pdf.cell(0, 10, get_text(lang, "footer"), ln=True, align="C")
+        pdf.set_text_color(100, 100, 100)
+        footer = get_text(lang, "footer")
+        pdf.cell(0, 10, footer, ln=True, align="C")
         
         output_path.parent.mkdir(parents=True, exist_ok=True)
         pdf.output(str(output_path))
-        
         return output_path
-
+    
     def generate_diploma(self, user_name: str, level: int, stars: int, output_path: Path, lang: str = "es") -> Path:
         """Genera un diploma de reconocimiento en PDF con soporte bilingüe."""
         from core.translations import get_text

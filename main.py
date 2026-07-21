@@ -1,14 +1,13 @@
 import asyncio
-import subprocess
 import flet as ft
 import json
 import random
-import sys
 from pathlib import Path
+
 from core.engine import ActivityEngine
 from core import users
 from core.pdf_generator import PDFGenerator
-from core.translations import get_text, get_available_languages
+from core.translations import get_text
 
 # Ruta absoluta segura
 BASE_DIR = Path(__file__).resolve().parent
@@ -39,66 +38,53 @@ def rounded_button(text_content, bgcolor, width, height, on_click, text_size=20,
     )
 
 def main(page: ft.Page):
-    page.title = "MateKids "
+    page.title = "MateKids 🧮"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     page.vertical_alignment = ft.VerticalAlignment.CENTER
     page.padding = 20
-    page.window_width = 900
-    page.window_height = 700
+    
+    # Configuración de ventana compatible con Flet 0.23+
+    if hasattr(page, 'window'):
+        page.window.width = 900
+        page.window.height = 700
 
     current_user = None
     current_level = 1
     score = 0
     activities_done = 0
     MAX_PER_SESSION = 5
-    current_lang = "es"  # Idioma por defecto
+    current_lang = "es"
 
-    # ---------- LOGIN ----------
+    # ==========================================
+    # 1. VISTA DE LOGIN
+    # ==========================================
     selected_avatar = users.AVATARS[0]
     avatar_buttons = []
 
-    def on_avatar_pick(e):
+    def on_avatar_pick(e, selected: str):
         nonlocal selected_avatar
-        selected_avatar = e.control.data
+        selected_avatar = selected
         for btn in avatar_buttons:
-            btn.bgcolor = ft.Colors.YELLOW_200 if btn.data == selected_avatar else ft.Colors.GREY_200
+            btn.bgcolor = ft.Colors.YELLOW_200 if getattr(btn, '_avatar', '') == selected_avatar else ft.Colors.GREY_200
         page.update()
 
-    # Selector de idioma
-    lang_dropdown = ft.Dropdown(
-        label="Language / Idioma",
-        options=[
-            ft.dropdown.Option(key="es", text="🇪🇸 Español"),
-            ft.dropdown.Option(key="en", text="🇬🇧 English"),
-        ],
-        value="es",
-        width=200,
-        on_change=lambda e: update_language(e.control.value)  # <-- CAMBIO CLAVE
-    )
-
-    def update_language(lang: str):
-        nonlocal current_lang
-        current_lang = lang
-        # Actualizar textos dinámicos
-        if 'login_view' in locals():
-            refresh_login_texts()
-        page.update()
-
-    avatar_grid = ft.Row(wrap=True, alignment=ft.MainAxisAlignment.CENTER, spacing=10)
+    avatar_grid = ft.Row(wrap=True, alignment=ft.MainAxisAlignment.CENTER, spacing=15)
     for i, a in enumerate(users.AVATARS):
-        btn = ft.ElevatedButton(
-            content=ft.Text(a, size=32), 
-            width=70, 
-            height=70, 
-            data=a,
-            style=ft.ButtonStyle(
-                shape=ft.RoundedRectangleBorder(radius=20),
-                bgcolor=ft.Colors.YELLOW_200 if i == 0 else ft.Colors.GREY_200
-            ),
+        # Usamos Container con ink=True para que el emoji mantenga su color y tenga efecto de clic
+        avatar_container = ft.Container(
+            content=ft.Text(a, size=40),
+            width=70,
+            height=70,
+            alignment=ft.alignment.center,
+            bgcolor=ft.Colors.YELLOW_200 if i == 0 else ft.Colors.GREY_200,
+            border_radius=20,
+            ink=True,
+            on_click=lambda e, avatar=a: on_avatar_pick(e, avatar)
         )
-        avatar_buttons.append(btn)
-        avatar_grid.controls.append(btn)
+        avatar_container._avatar = a
+        avatar_buttons.append(avatar_container)
+        avatar_grid.controls.append(avatar_container)
 
     name_field = ft.TextField(
         label=get_text(current_lang, "your_name"), 
@@ -108,12 +94,25 @@ def main(page: ft.Page):
         border_radius=20
     )
 
-    def refresh_login_texts():
-        """Actualiza textos del login según idioma"""
+    def update_language(lang: str):
+        nonlocal current_lang
+        current_lang = lang
         name_field.label = get_text(current_lang, "your_name")
-        login_view.controls[0].value = get_text(current_lang, "welcome")
-        login_view.controls[1].value = get_text(current_lang, "choose_avatar")
-        login_view.controls[5].content.value = get_text(current_lang, "start_playing")
+        login_welcome.value = get_text(current_lang, "welcome")
+        login_choose_avatar.value = get_text(current_lang, "choose_avatar")
+        login_start_btn.content.value = get_text(current_lang, "start_playing")
+        page.update()
+
+    lang_dropdown = ft.Dropdown(
+        label="Language / Idioma",
+        options=[
+            ft.dropdown.Option(key="es", text="🇪🇸 Español"),
+            ft.dropdown.Option(key="en", text="🇬🇧 English"),
+        ],
+        value="es",
+        width=220,
+        on_change=lambda e: update_language(e.control.value)
+    )
 
     def do_login(e):
         nonlocal current_user
@@ -125,19 +124,25 @@ def main(page: ft.Page):
         current_user = users.create_user(name, selected_avatar, current_lang)
         show_home()
 
+    login_welcome = ft.Text(get_text(current_lang, "welcome"), size=40, weight=ft.FontWeight.BOLD, color=ft.Colors.INDIGO)
+    login_choose_avatar = ft.Text(get_text(current_lang, "choose_avatar"), size=20)
+    login_start_btn = rounded_button(get_text(current_lang, "start_playing"), ft.Colors.GREEN, 280, 60, do_login, text_size=22)
+
     login_view = ft.Column([
-        ft.Text(get_text(current_lang, "welcome"), size=40, weight=ft.FontWeight.BOLD, color=ft.Colors.INDIGO),
-        ft.Text(get_text(current_lang, "choose_avatar"), size=20),
+        login_welcome,
+        login_choose_avatar,
         avatar_grid,
         ft.Container(height=20),
         lang_dropdown,
         ft.Container(height=10),
         name_field,
         ft.Container(height=10),
-        rounded_button(get_text(current_lang, "start_playing"), ft.Colors.GREEN, 280, 60, do_login, text_size=22)
+        login_start_btn
     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10)
 
-    # ---------- HOME ----------
+    # ==========================================
+    # 2. VISTA DE INICIO (HOME)
+    # ==========================================
     home_title = ft.Text("", size=34, weight=ft.FontWeight.BOLD, color=ft.Colors.INDIGO)
     stars_label = ft.Text("", size=22)
     pdf_status = ft.Text("", size=16, color=ft.Colors.GREEN)
@@ -160,19 +165,49 @@ def main(page: ft.Page):
             pdf_status.value = f"{get_text(current_lang, 'pdf_error')}: {ex}"
             page.update()
 
+    def toggle_home_language(e):
+        nonlocal current_lang
+        current_lang = "en" if current_lang == "es" else "es"
+        
+        # Actualizar textos dinámicos del home
+        home_title.value = f"{get_text(current_lang, 'greeting')} {current_user['avatar']} {current_user['name']}!"
+        stars_label.value = f" {get_text(current_lang, 'stars')}: {current_user.get('stars', 0)}"
+        choose_level_text.value = get_text(current_lang, "choose_level")
+        lang_toggle_btn.tooltip = "Cambiar idioma / Change language"
+        
+        # Actualizar botones
+        level_btns.controls[0].content.value = get_text(current_lang, "level_1")
+        level_btns.controls[1].content.value = get_text(current_lang, "level_2")
+        level_btns.controls[2].content.value = get_text(current_lang, "level_3")
+        pdf_btn.content.value = get_text(current_lang, "generate_pdf")
+        page.update()
+
+    lang_toggle_btn = ft.IconButton(
+        icon=ft.Icons.LANGUAGE,
+        tooltip="Cambiar idioma / Change language",
+        icon_size=30,
+        on_click=toggle_home_language
+    )
+
+    choose_level_text = ft.Text(get_text(current_lang, "choose_level"), size=26, weight=ft.FontWeight.BOLD)
+    level_btns = ft.Row([
+        rounded_button(get_text(current_lang, "level_1"), ft.Colors.GREEN, 220, 100, lambda e, l=1: pick_level(l), text_size=22),
+        rounded_button(get_text(current_lang, "level_2"), ft.Colors.BLUE, 220, 100, lambda e, l=2: pick_level(l), text_size=22),
+        rounded_button(get_text(current_lang, "level_3"), ft.Colors.PURPLE, 220, 100, lambda e, l=3: pick_level(l), text_size=22),
+    ], alignment=ft.MainAxisAlignment.CENTER, spacing=20)
+
+    pdf_btn = rounded_button(get_text(current_lang, "generate_pdf"), ft.Colors.PURPLE, 260, 60, generate_pdf, text_size=18)
+
     home_view = ft.Column([
+        ft.Row([lang_toggle_btn], alignment=ft.MainAxisAlignment.END),
         home_title, 
         stars_label,
         ft.Container(height=30),
-        ft.Text(get_text(current_lang, "choose_level"), size=26, weight=ft.FontWeight.BOLD),
+        choose_level_text,
         ft.Container(height=10),
-        ft.Row([
-            rounded_button(get_text(current_lang, "level_1"), ft.Colors.GREEN, 220, 100, lambda e, l=1: pick_level(l), text_size=22),
-            rounded_button(get_text(current_lang, "level_2"), ft.Colors.BLUE, 220, 100, lambda e, l=2: pick_level(l), text_size=22),
-            rounded_button(get_text(current_lang, "level_3"), ft.Colors.PURPLE, 220, 100, lambda e, l=3: pick_level(l), text_size=22),
-        ], alignment=ft.MainAxisAlignment.CENTER, spacing=20),
+        level_btns,
         ft.Container(height=20),
-        rounded_button(get_text(current_lang, "generate_pdf"), ft.Colors.PURPLE, 260, 60, generate_pdf, text_size=18),
+        pdf_btn,
         pdf_status
     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10)
 
@@ -183,7 +218,9 @@ def main(page: ft.Page):
         page.views.append(ft.View("/", [home_view]))
         page.update()
 
-    # ---------- GAME ----------
+    # ==========================================
+    # 3. VISTA DE JUEGO (GAME)
+    # ==========================================
     game_column = ft.Column(expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
     game_view = ft.View("/game", [game_column], horizontal_alignment=ft.CrossAxisAlignment.CENTER, vertical_alignment=ft.VerticalAlignment.CENTER)
 
@@ -211,6 +248,7 @@ def main(page: ft.Page):
             else:
                 show_game()
 
+        # Pasamos current_lang al motor
         engine = ActivityEngine(page, activity, on_finish, current_lang)
         game_column.controls = [engine.build()]
         page.views.clear()
@@ -218,7 +256,9 @@ def main(page: ft.Page):
         page.update()
         page.run_task(engine.run)
 
-    # ---------- RESULT ----------
+    # ==========================================
+    # 4. VISTA DE RESULTADOS (RESULT)
+    # ==========================================
     result_title = ft.Text("", size=38, weight=ft.FontWeight.BOLD)
     result_msg = ft.Text("", size=24)
     diploma_status = ft.Text("", size=14, color=ft.Colors.GREEN, italic=True)
@@ -272,37 +312,20 @@ def main(page: ft.Page):
         page.views.append(ft.View("/", [login_view]))
         page.update()
 
-    # ---------- Inicio ----------
+    # ==========================================
+    # INICIO
+    # ==========================================
     show_login()
-# ============================================================
-# 6. PUNTO DE ENTRADA
-# ============================================================
-import os
+
+
 if __name__ == "__main__":
     import os
-    PORT = int(os.environ.get("PORT", 8550))
-    ES_RENDER = os.environ.get("RENDER", "").lower() == "true"
-
-    if ES_RENDER:
-        print("🚀 Modo Render.com activado")
-        print(f"📡 Puerto: {PORT}")
-        print("🌍 Audio: Web Speech API del navegador")
-    else:
-        print("=" * 60)
-        print("🖥️  Modo LOCAL (tu PC)")
-        print(f"📱 Acceso local: http://localhost:{PORT}")
-        print("=" * 60)
-    try:    
-       pass
-    except Exception:
-       pass
+    # Render asigna el puerto automáticamente en la variable de entorno PORT
+    port = int(os.environ.get("PORT", 8080))
     
-
-    # Usamos ft.app, NO ft.run
     ft.app(
         target=main,
-        port=PORT,
+        port=port,
         host="0.0.0.0",  # Vital para que Render lo detecte
         view=ft.WEB_BROWSER
     )
-  
