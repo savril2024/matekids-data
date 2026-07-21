@@ -97,6 +97,7 @@ class ActivityEngine:
 
     def _make_emoji(self, emoji: str, size: int = 48) -> ft.Text:
         return ft.Text(emoji, size=size,
+                       font_family="Segoe UI Emoji",  # Fuente con soporte emoji en Windows 
                        animate_opacity=ft.Animation(400),
                        animate_scale=ft.Animation(400),
                        animate_offset=ft.Animation(500))

@@ -223,7 +223,8 @@ def main(page: ft.Page):
     # ==========================================
     game_column = ft.Column(expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
     game_view = ft.View("/game", [game_column], horizontal_alignment=ft.CrossAxisAlignment.CENTER, vertical_alignment=ft.VerticalAlignment.CENTER)
-
+     
+    #aqui reemplazo
     def show_game():
         pool = [a for a in load_activities() if a["level"] == current_level]
         if not pool:
@@ -232,6 +233,20 @@ def main(page: ft.Page):
             return
             
         activity = random.choice(pool)
+
+        # Botón de cambio de idioma en el juego
+        def toggle_game_language(e):
+            nonlocal current_lang
+            current_lang = "en" if current_lang == "es" else "es"
+            # Recargar el juego con el nuevo idioma
+            show_game()
+
+        game_lang_btn = ft.IconButton(
+            icon=ft.Icons.LANGUAGE,
+            icon_size=25,
+            tooltip="Cambiar idioma",
+            on_click=toggle_game_language
+        )
 
         def on_finish(success: bool, stars: int):
             nonlocal score, activities_done
@@ -247,10 +262,18 @@ def main(page: ft.Page):
                 show_result()
             else:
                 show_game()
-
-        # Pasamos current_lang al motor
+         # Pasamos current_lang al motor        
         engine = ActivityEngine(page, activity, on_finish, current_lang)
-        game_column.controls = [engine.build()]
+    
+        # Agregar botón de idioma en la parte superior
+        game_column.controls = [
+            ft.Row([game_lang_btn], alignment=ft.MainAxisAlignment.END),
+            engine.build()
+        ]
+
+       
+       # engine = ActivityEngine(page, activity, on_finish, current_lang)
+       # game_column.controls = [engine.build()]
         page.views.clear()
         page.views.append(game_view)
         page.update()
