@@ -113,59 +113,71 @@ class ActivityEngine:
             group = ft.Row([self._make_emoji(self.data["emoji"], size=35) for _ in range(per_group)], spacing=3)
             self.objects_view.controls.append(group)
         self.page.update()
-
+    #desde aqui
     async def _animate_remove(self, n: int):
-        """Anima la remoción de objetos."""
-        controls = self.objects_view.controls
+        """Anima la remoción de objetos con fade out."""
+        controls = self.objects_view.controls[:]  # Copia de la lista
         to_remove = controls[-n:] if len(controls) >= n else controls
         
+        # Animar desvanecimiento
         for obj in to_remove:
-            obj.scale = 0.5
-            obj.opacity = 0.3
-            self.page.update()
-            await self._wait(300)
+            if hasattr(obj, 'opacity'):
+                obj.opacity = 0.3
+                obj.scale = 0.5
+                self.page.update()
+                await self._wait(300)
         
-        # Remover del todo
+        # Remover completamente
         for obj in to_remove:
             if obj in self.objects_view.controls:
                 self.objects_view.controls.remove(obj)
         self.page.update()
+        await self._wait(200)
 
     async def _animate_add(self, n: int):
-        """Anima la adición de objetos."""
+        """Anima la adición de objetos con pop-in."""
         for i in range(n):
             new_obj = self._make_emoji(self.data["emoji"])
             new_obj.scale = 0
+            new_obj.opacity = 0
+            
             self.objects_view.controls.append(new_obj)
             self.page.update()
             await self._wait(100)
             
-            # Animar crecimiento
-            new_obj.scale = 1.2
+            # Animación de entrada
+            new_obj.scale = 1.3
+            new_obj.opacity = 1
             self.page.update()
             await self._wait(200)
+            
             new_obj.scale = 1
             self.page.update()
 
     async def _animate_multiply(self):
-        """Resalta cada grupo."""
-        for group in self.objects_view.controls:
+        """Resalta cada grupo secuencialmente."""
+        for idx, group in enumerate(self.objects_view.controls):
+            # Si es un Row (grupo), resaltar sus objetos
             if isinstance(group, ft.Row):
                 for obj in group.controls:
-                    obj.scale = 1.3
+                    if hasattr(obj, 'scale'):
+                        obj.scale = 1.3
                 self.page.update()
                 await self._wait(400)
+                
                 for obj in group.controls:
-                    obj.scale = 1
+                    if hasattr(obj, 'scale'):
+                        obj.scale = 1
                 self.page.update()
 
     async def _animate_divide(self, divisor: int):
-        """Anima la división en grupos."""
-        total = len(self.objects_view.controls)
-        self.objects_view.controls.clear()
+        """Anima la división repartiendo objetos en grupos."""
+        total_objects = len(self.objects_view.controls)
         
-        # Crear contenedores vacíos
-        containers = []
+        # Crear contenedores de grupos vacíos
+        self.objects_view.controls.clear()
+        group_containers = []
+        
         for i in range(divisor):
             container = ft.Container(
                 content=ft.Row(spacing=3, wrap=True),
@@ -173,21 +185,28 @@ class ActivityEngine:
                 border_radius=10,
                 padding=10,
                 bgcolor=ft.Colors.PURPLE_50,
-                width=100
+                width=100,
+                height=100
             )
-            containers.append(container)
+            group_containers.append(container)
             self.objects_view.controls.append(container)
-        self.page.update()
         
-        # Distribuir objetos
-        objs = [self._make_emoji(self.data["emoji"]) for _ in range(total)]
-        for i, obj in enumerate(objs):
-            group_idx = i % divisor
-            if isinstance(containers[group_idx].content, ft.Row):
-                containers[group_idx].content.controls.append(obj)
-            self.page.update()
-            await self._wait(200)
-
+        self.page.update()
+        await self._wait(300)
+        
+        # Crear objetos a distribuir
+        objects_to_distribute = [self._make_emoji(self.data["emoji"]) for _ in range(total_objects)]
+        
+        # Distribuir uno por uno con animación
+        for idx, obj in enumerate(objects_to_distribute):
+            group_idx = idx % divisor
+            target_container = group_containers[group_idx]
+            
+            if isinstance(target_container.content, ft.Row):
+                target_container.content.controls.append(obj)
+                self.page.update()
+                await self._wait(250)
+    #hasta aqui
     def _build_options(self) -> ft.Control:
         col = ft.Column(alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=15)
         

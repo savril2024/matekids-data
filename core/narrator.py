@@ -1,7 +1,9 @@
 import flet as ft
 
 class Narrator:
-    def __init__(self, lang="es", audio_control=None, on_text=None):
+    """Narrador usando Web Speech API (sin ft.Audio)."""
+    
+    def __init__(self, lang="es", on_text=None):
         self.lang = "es-ES" if lang == "es" else "en-US"
         self.on_text = on_text
         self.page = None
@@ -17,12 +19,20 @@ class Narrator:
             print(f"[NARRATOR] {text}")
             return
 
+        # Usar Web Speech API del navegador
         js_code = f"""
-        const utterance = new SpeechSynthesisUtterance("{text.replace('"', '\\"')}");
-        utterance.lang = "{self.lang}";
-        utterance.rate = 0.9;
-        utterance.pitch = 1.1;
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(utterance);
+        if ('speechSynthesis' in window) {{
+            // Cancelar audio anterior
+            window.speechSynthesis.cancel();
+            
+            const utterance = new SpeechSynthesisUtterance("{text.replace('"', '\\"')}");
+            utterance.lang = "{self.lang}";
+            utterance.rate = 0.9;  // Un poco más lento
+            utterance.pitch = 1.1; // Un poco más agudo
+            
+            window.speechSynthesis.speak(utterance);
+        }} else {{
+            console.log('Web Speech API no soportada');
+        }}
         """
         self.page.evaluate(js_code)
