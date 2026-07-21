@@ -69,12 +69,12 @@ def main(page: ft.Page):
     lang_dropdown = ft.Dropdown(
         label="Language / Idioma",
         options=[
-            ft.dropdown.Option("es", "🇸 Español"),
-            ft.dropdown.Option("en", "🇬🇧 English"),
+            ft.dropdown.Option(key="es", text="🇪🇸 Español"),
+            ft.dropdown.Option(key="en", text="🇬🇧 English"),
         ],
         value="es",
         width=200,
-        on_change=lambda e: update_language(e.control.value)
+        on_change=lambda e: update_language(e.control.value)  # <-- CAMBIO CLAVE
     )
 
     def update_language(lang: str):
