@@ -282,6 +282,7 @@ if __name__ == "__main__":
     import os
     PORT = int(os.environ.get("PORT", 8550))
     ES_RENDER = os.environ.get("RENDER", "").lower() == "true"
+
     if ES_RENDER:
         print("🚀 Modo Render.com activado")
         print(f"📡 Puerto: {PORT}")
@@ -297,10 +298,11 @@ if __name__ == "__main__":
        pass
     
 
-    ft.run(
-        main,
-        view="web_browser",
-        host="0.0.0.0",  # <-- CAMBIO CLAVE: Permite tráfico externo
-        port=PORT
+    # Usamos ft.app, NO ft.run
+    ft.app(
+        target=main,
+        port=PORT,
+        host="0.0.0.0",  # Vital para que Render lo detecte
+        view=ft.WEB_BROWSER
     )
-    
+  
