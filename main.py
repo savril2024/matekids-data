@@ -13,6 +13,7 @@ from core.translations import get_text
 BASE_DIR = Path(__file__).resolve().parent
 ACTIVITIES_FILE = BASE_DIR / "data" / "activities.json"
 
+
 def load_activities() -> list:
     if not ACTIVITIES_FILE.exists():
         print(f"⚠️ ADVERTENCIA: No se encontró {ACTIVITIES_FILE}")
@@ -345,10 +346,11 @@ if __name__ == "__main__":
     import os
     # Render asigna el puerto automáticamente en la variable de entorno PORT
     port = int(os.environ.get("PORT", 8080))
-    
+    ft.app(target=main, assets_dir="assets")
     ft.app(
         target=main,
         port=port,
         host="0.0.0.0",  # Vital para que Render lo detecte
-        view=ft.WEB_BROWSER
+        view="web_browser",
     )
+        

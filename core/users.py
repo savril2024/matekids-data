@@ -5,7 +5,7 @@ from pathlib import Path
 DB_PATH = Path("/data/matekids.db") if Path("/data").exists() else Path("data/matekids.db")
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-AVATARS = ["🦁", "", "🦊", "", "🐵", "🐯", "🐰", "🐶"]
+AVATARS = ["🦁", "🦄", "🦊", "🐝", "🐵", "🐯", "🐰", "🐶"]
 
 
 def _conn():
