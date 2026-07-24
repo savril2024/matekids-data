@@ -4,7 +4,7 @@
       "level": 1,
       "title": {"es": "Restando Peces", "en": "Subtracting Fish"},
       "operation": "-",
-      "emoji": "🐠",
+      "emoji": "🐟",
       "total": 7,
       "remove": 3,
       "answer": 4,
@@ -46,7 +46,7 @@
       "level": 1,
       "title": {"es": "Sumando Carros", "en": "Adding Cars"},
       "operation": "+",
-      "emoji": "🚕",
+      "emoji": "🚗",
       "total": 3,
       "add": 3,
       "answer": 6,
@@ -61,20 +61,20 @@
       "title": {"es": "Restando Manzanas", "en": "Subtracting Apples"},
       "operation": "-",
       "emoji": "🍎",
-      "total": 7,
+      "total": 9,
       "remove": 3,
-      "answer": 4,
+      "answer": 6,
       "options": [4, 5, 6, 7],
       "narration": {
-        "es": {"intro": "Mira, hay siete manzanas.", "action": "Se comen tres manzanas.", "question": "¿Cuántas manzanas quedan?"},
-        "en": {"intro": "Look, there are seven apples.", "action": "Three apples are eaten.", "question": "How many apples are left?"}
+        "es": {"intro": "Mira, hay nueve manzanas.", "action": "Se comen tres manzanas.", "question": "¿Cuántas manzanas quedan?"},
+        "en": {"intro": "Look, there are nine  apples.", "action": "Three apples are eaten.", "question": "How many apples are left?"}
       }
     },
     {
       "level": 1,
       "title": {"es": "Restando Niños en el salón", "en": "Subtracting Kids in the Classroom"},
       "operation": "-",
-      "emoji": "👩",
+      "emoji": "👩‍🦰",
       "total": 9,
       "remove": 4,
       "answer": 5,
@@ -186,7 +186,7 @@
       "level": 3,
       "title": {"es": "Resta con dos cifras", "en": "Two-digit Subtraction"},
       "operation": "-",
-      "emoji": "✏️",
+      "emoji": "🍦",
       "total": 15,
       "remove": 5,
       "answer": 10,
@@ -249,7 +249,7 @@
       "options": [2, 3, 4, 5],
       "narration": {
         "es": {"intro": "Hay 15 flores.", "action": "Las repartimos en 5 jarrones.", "question": "¿Cuántas flores hay en cada jarrón?"},
-        "en": {"intro": "There are 15 flowers.", "action": "We share them into 5 vases.", "question": "How many flowers are in each vase?"}
+        "en": {"intro": "There are 15 flowers.", "action": "We share them into 5 jarrones.", "question": "How many flowers are in each vase?"}
       }
     }
   ]

@@ -9,21 +9,21 @@ from core import users
 from core.pdf_generator import PDFGenerator
 from core.translations import get_text
 
-# Ruta absoluta segura
 BASE_DIR = Path(__file__).resolve().parent
 ACTIVITIES_FILE = BASE_DIR / "data" / "activities.json"
 
 
 def load_activities() -> list:
     if not ACTIVITIES_FILE.exists():
-        print(f"⚠️ ADVERTENCIA: No se encontró {ACTIVITIES_FILE}")
+        print(f"⚠️ No se encontró {ACTIVITIES_FILE}")
         return []
     try:
         data = json.loads(ACTIVITIES_FILE.read_text(encoding="utf-8"))
         return data.get("activities", [])
     except Exception as e:
-        print(f"⚠️ ERROR leyendo JSON: {e}")
+        print(f"⚠️ ERROR: {e}")
         return []
+
 
 def rounded_button(text_content, bgcolor, width, height, on_click, text_size=20, text_color="white"):
     return ft.Button(
@@ -38,6 +38,7 @@ def rounded_button(text_content, bgcolor, width, height, on_click, text_size=20,
         on_click=on_click
     )
 
+
 def main(page: ft.Page):
     page.title = "MateKids 🧮"
     page.theme_mode = ft.ThemeMode.LIGHT
@@ -45,7 +46,6 @@ def main(page: ft.Page):
     page.vertical_alignment = ft.VerticalAlignment.CENTER
     page.padding = 20
     
-    # Configuración de ventana compatible con Flet 0.23+
     if hasattr(page, 'window'):
         page.window.width = 900
         page.window.height = 700
@@ -57,9 +57,7 @@ def main(page: ft.Page):
     MAX_PER_SESSION = 5
     current_lang = "es"
 
-    # ==========================================
-    # 1. VISTA DE LOGIN
-    # ==========================================
+    # ========== LOGIN ==========
     selected_avatar = users.AVATARS[0]
     avatar_buttons = []
 
@@ -72,12 +70,11 @@ def main(page: ft.Page):
 
     avatar_grid = ft.Row(wrap=True, alignment=ft.MainAxisAlignment.CENTER, spacing=15)
     for i, a in enumerate(users.AVATARS):
-        # Usamos Container con ink=True para que el emoji mantenga su color y tenga efecto de clic
         avatar_container = ft.Container(
             content=ft.Text(a, size=40),
             width=70,
             height=70,
-            alignment=ft.alignment.center,
+            alignment=ft.Alignment(0, 0),
             bgcolor=ft.Colors.YELLOW_200 if i == 0 else ft.Colors.GREY_200,
             border_radius=20,
             ink=True,
@@ -104,17 +101,29 @@ def main(page: ft.Page):
         login_start_btn.content.value = get_text(current_lang, "start_playing")
         page.update()
 
-    lang_dropdown = ft.Dropdown(
-        label="Language / Idioma",
-        options=[
-            ft.dropdown.Option(key="es", text="🇪🇸 Español"),
-            ft.dropdown.Option(key="en", text="🇬🇧 English"),
-        ],
-        value="es",
-        width=220,
-        on_change=lambda e: update_language(e.control.value)
-    )
+    lang_flag = ft.Text("🇧", size=20)
+    lang_text_label = ft.Text("EN", size=16, weight=ft.FontWeight.BOLD)
 
+    def toggle_language(e):
+        nonlocal current_lang
+        current_lang = "en" if current_lang == "es" else "es"
+        lang_flag.value = "🇪🇸" if current_lang == "es" else "🇬🇧"
+        lang_text_label.value = "ES" if current_lang == "es" else "EN"
+        update_language(current_lang)
+
+    lang_btn = ft.Container(
+        content=ft.Button(
+            content=ft.Row([lang_flag, lang_text_label], spacing=5),
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.INDIGO,
+                color=ft.Colors.WHITE,
+                shape=ft.RoundedRectangleBorder(radius=15),
+            ),
+            on_click=toggle_language,
+        ),
+        padding=ft.Padding(top=10, right=10, bottom=0, left=0),
+    )
+    
     def do_login(e):
         nonlocal current_user
         name = name_field.value.strip()
@@ -134,16 +143,14 @@ def main(page: ft.Page):
         login_choose_avatar,
         avatar_grid,
         ft.Container(height=20),
-        lang_dropdown,
+        ft.Row([lang_btn], alignment=ft.MainAxisAlignment.END),
         ft.Container(height=10),
         name_field,
         ft.Container(height=10),
         login_start_btn
     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10)
 
-    # ==========================================
-    # 2. VISTA DE INICIO (HOME)
-    # ==========================================
+    # ========== HOME ==========
     home_title = ft.Text("", size=34, weight=ft.FontWeight.BOLD, color=ft.Colors.INDIGO)
     stars_label = ft.Text("", size=22)
     pdf_status = ft.Text("", size=16, color=ft.Colors.GREEN)
@@ -155,28 +162,66 @@ def main(page: ft.Page):
         activities_done = 0
         show_game()
 
+    # def generate_pdf(e):
+    #     try:
+    #         generator = PDFGenerator(ACTIVITIES_FILE, BASE_DIR)
+    #         output_path = BASE_DIR / "data" / f"cuadernillo_nivel_{current_level}_{current_lang}.pdf"
+    #         generator.generate_workbook(current_level, output_path, current_lang)
+    #         pdf_status.value = f"{get_text(current_lang, 'pdf_saved')} {output_path.name}"
+    #         page.update()
+    #     except Exception as ex:
+    #         pdf_status.value = f"{get_text(current_lang, 'pdf_error')}: {ex}"
+    #         page.update()
+
     def generate_pdf(e):
         try:
             generator = PDFGenerator(ACTIVITIES_FILE, BASE_DIR)
-            output_path = BASE_DIR / "data" / f"cuadernillo_nivel_{current_level}_{current_lang}.pdf"
+            output_path = BASE_DIR / "data" / f"cuadernillo_nivel_{current_level}_{current_lang}.png"
             generator.generate_workbook(current_level, output_path, current_lang)
-            pdf_status.value = f"{get_text(current_lang, 'pdf_saved')} {output_path.name}"
+            pdf_status.value = f"✅ Imagen guardada: {output_path.name}"
             page.update()
         except Exception as ex:
-            pdf_status.value = f"{get_text(current_lang, 'pdf_error')}: {ex}"
+            pdf_status.value = f"❌ Error: {ex}"
             page.update()
+
+    def generate_pdf(e):
+        try:
+            generator = PDFGenerator(ACTIVITIES_FILE, BASE_DIR)
+            output_path = BASE_DIR / "data" / f"cuadernillo_nivel_{current_level}_{current_lang}.png"
+            generated_path = generator.generate_workbook(current_level, output_path, current_lang)
+            
+            # ✅ Forzar descarga en el navegador
+            filename = generated_path.name
+            download_url = f"/assets/downloads/{filename}"
+            
+            # Usar JavaScript para forzar la descarga con atributo 'download'
+            js_code = f"""
+            (function() {{
+                const link = document.createElement('a');
+                link.href = '{download_url}';
+                link.download = '{filename}';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }})();
+            """
+            
+            if hasattr(page, 'run_js'):
+                page.run_js(js_code)
+            
+            pdf_status.value = f"✅ Descarga iniciada: {filename}"
+            page.update()
+        except Exception as ex:
+            pdf_status.value = f"❌ Error: {ex}"
+            page.update()        
+    ##hasta aqui    
 
     def toggle_home_language(e):
         nonlocal current_lang
         current_lang = "en" if current_lang == "es" else "es"
-        
-        # Actualizar textos dinámicos del home
         home_title.value = f"{get_text(current_lang, 'greeting')} {current_user['avatar']} {current_user['name']}!"
         stars_label.value = f" {get_text(current_lang, 'stars')}: {current_user.get('stars', 0)}"
         choose_level_text.value = get_text(current_lang, "choose_level")
-        lang_toggle_btn.tooltip = "Cambiar idioma / Change language"
-        
-        # Actualizar botones
         level_btns.controls[0].content.value = get_text(current_lang, "level_1")
         level_btns.controls[1].content.value = get_text(current_lang, "level_2")
         level_btns.controls[2].content.value = get_text(current_lang, "level_3")
@@ -185,7 +230,7 @@ def main(page: ft.Page):
 
     lang_toggle_btn = ft.IconButton(
         icon=ft.Icons.LANGUAGE,
-        tooltip="Cambiar idioma / Change language",
+        tooltip="Cambiar idioma",
         icon_size=30,
         on_click=toggle_home_language
     )
@@ -212,21 +257,57 @@ def main(page: ft.Page):
         pdf_status
     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10)
 
+        # ... (tu código existente de home_view) ...
+
+    # ✅ NUEVO: Botón de Salir
+    def do_exit(e):
+        # En web, page.window.close() a veces es bloqueado por el navegador.
+        # Esta es la forma más segura: limpiar la pantalla y mostrar despedida.
+        page.clean()
+        page.add(
+            ft.Column([
+                ft.Icon(ft.Icons.CHECK_CIRCLE, color=ft.Colors.GREEN, size=80),
+                ft.Text("¡Gracias por jugar!", size=40, weight=ft.FontWeight.BOLD, color=ft.Colors.INDIGO),
+                ft.Text("Ya puedes cerrar esta pestaña del navegador.", size=20, color=ft.Colors.GREY_600),
+            ], 
+            alignment=ft.MainAxisAlignment.CENTER, 
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER, 
+            expand=True)
+        )
+        page.update()
+        
+        # Intentar cerrar la ventana (funciona perfecto en Desktop, en Web depende del navegador)
+        try:
+            page.window.close()
+        except Exception:
+            pass
+
+    exit_btn = rounded_button(
+        "Salir de la App", 
+        ft.Colors.RED_400, 
+        220, 
+        60, 
+        do_exit, 
+        text_size=20
+    )
+
+    # Agrega el botón al final de tu home_view
+    home_view.controls.append(ft.Container(height=30))
+    home_view.controls.append(exit_btn)
+
+
     def show_home():
         home_title.value = f"{get_text(current_lang, 'greeting')} {current_user['avatar']} {current_user['name']}!"
         stars_label.value = f" {get_text(current_lang, 'stars')}: {current_user.get('stars', 0)}"
-        page.views.clear()
-        page.views.append(ft.View("/", [home_view]))
+        page.clean()
+        page.add(home_view)
         page.update()
 
-    # ==========================================
-    # 3. VISTA DE JUEGO (GAME)
-    # ==========================================
+    # ========== GAME ==========
     game_column = ft.Column(expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
-    game_view = ft.View("/game", [game_column], horizontal_alignment=ft.CrossAxisAlignment.CENTER, vertical_alignment=ft.VerticalAlignment.CENTER)
-     
-    #aqui reemplazo
+
     def show_game():
+        nonlocal current_level, score, activities_done
         pool = [a for a in load_activities() if a["level"] == current_level]
         if not pool:
             pdf_status.value = get_text(current_lang, "no_activities")
@@ -235,11 +316,9 @@ def main(page: ft.Page):
             
         activity = random.choice(pool)
 
-        # Botón de cambio de idioma en el juego
         def toggle_game_language(e):
             nonlocal current_lang
             current_lang = "en" if current_lang == "es" else "es"
-            # Recargar el juego con el nuevo idioma
             show_game()
 
         game_lang_btn = ft.IconButton(
@@ -263,26 +342,19 @@ def main(page: ft.Page):
                 show_result()
             else:
                 show_game()
-         # Pasamos current_lang al motor        
+        
         engine = ActivityEngine(page, activity, on_finish, current_lang)
-    
-        # Agregar botón de idioma en la parte superior
         game_column.controls = [
             ft.Row([game_lang_btn], alignment=ft.MainAxisAlignment.END),
             engine.build()
         ]
 
-       
-       # engine = ActivityEngine(page, activity, on_finish, current_lang)
-       # game_column.controls = [engine.build()]
-        page.views.clear()
-        page.views.append(game_view)
+        page.clean()
+        page.add(game_column)
         page.update()
         page.run_task(engine.run)
 
-    # ==========================================
-    # 4. VISTA DE RESULTADOS (RESULT)
-    # ==========================================
+    # ========== RESULT ==========
     result_title = ft.Text("", size=38, weight=ft.FontWeight.BOLD)
     result_msg = ft.Text("", size=24)
     diploma_status = ft.Text("", size=14, color=ft.Colors.GREEN, italic=True)
@@ -292,7 +364,6 @@ def main(page: ft.Page):
             generator = PDFGenerator(ACTIVITIES_FILE, BASE_DIR)
             safe_name = current_user["name"].replace(" ", "_").lower()
             output_path = BASE_DIR / "data" / f"diploma_nivel_{current_level}_{safe_name}_{current_lang}.pdf"
-            
             generator.generate_diploma(
                 user_name=current_user["name"],
                 level=current_level,
@@ -323,34 +394,32 @@ def main(page: ft.Page):
         else:
             result_title.value = f"{get_text(current_lang, 'good_job')} {current_user['avatar']}!"
             result_title.color = ft.Colors.INDIGO
-            
         result_msg.value = f"{get_text(current_lang, 'got_stars')} {score} {get_text(current_lang, 'stars_in_level')} {current_level}."
         diploma_status.value = ""
-        
-        page.views.clear()
-        page.views.append(ft.View("/result", [result_view]))
+        page.clean()
+        page.add(result_view)
         page.update()
 
     def show_login():
-        page.views.clear()
-        page.views.append(ft.View("/", [login_view]))
+        page.clean()
+        page.add(login_view)
         page.update()
 
-    # ==========================================
-    # INICIO
-    # ==========================================
+    # INICIAR
     show_login()
 
 
+# ✅ BLOQUE CORRECTO PARA FLET 0.86+
 if __name__ == "__main__":
     import os
-    # Render asigna el puerto automáticamente en la variable de entorno PORT
     port = int(os.environ.get("PORT", 8080))
-    ft.app(target=main, assets_dir="assets")
-    ft.app(
-        target=main,
+    
+    ft.run(
+        main,
+        host="127.0.0.1",
         port=port,
-        host="0.0.0.0",  # Vital para que Render lo detecte
         view="web_browser",
+        assets_dir="assets"
+    #    upload_dir="uploads",  # necesario: aqui llega el audio grabado por AudioRecorder
+
     )
-        

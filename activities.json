@@ -1,0 +1,40 @@
+{
+  "activities": [
+    {
+      "level": 1,
+      "operation": "+",
+      "total": 5,
+      "add": 3
+    },
+    {
+      "level": 1,
+      "operation": "-",
+      "total": 10,
+      "remove": 4
+    },
+    {
+      "level": 1,
+      "operation": "×",
+      "groups": 3,
+      "per_group": 4
+    },
+    {
+      "level": 1,
+      "operation": "÷",
+      "total": 12,
+      "divisor": 3
+    },
+    {
+      "level": 1,
+      "operation": "+",
+      "total": 7,
+      "add": 2
+    },
+    {
+      "level": 1,
+      "operation": "-",
+      "total": 8,
+      "remove": 3
+    }
+  ]
+}

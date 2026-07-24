@@ -1,22 +1,30 @@
-
-from fpdf import FPDF
+"""
+core/pdf_generator.py
+Genera cuadernillos y diplomas como IMÁGENES PNG con emojis a color.
+En modo web, guarda en assets/downloads/ para que el navegador pueda descargar.
+"""
+from PIL import Image, ImageDraw, ImageFont
 from pathlib import Path
 import json
+import os
 import requests
-from PIL import Image
 import io
 from datetime import datetime
 
 from core.translations import get_text
 
+
 class PDFGenerator:
-    """Genera cuadernillos y diplomas PDF con ejercicios matemáticos y emojis."""
+    """Genera cuadernillos y diplomas en formato PNG con emojis a color."""
     
     def __init__(self, activities_file: Path, base_dir: Path = None):
         self.activities = self._load_activities(activities_file)
         self.base_dir = base_dir or Path(__file__).resolve().parent.parent
         self.emoji_dir = self.base_dir / "assets" / "emojis"
         self.emoji_dir.mkdir(parents=True, exist_ok=True)
+        # ✅ NUEVO: Carpeta de descargas dentro de assets/
+        self.download_dir = self.base_dir / "assets" / "downloads"
+        self.download_dir.mkdir(parents=True, exist_ok=True)
     
     def _load_activities(self, file_path: Path) -> list:
         if not file_path.exists():
@@ -28,8 +36,40 @@ class PDFGenerator:
             print(f"❌ Error cargando actividades: {e}")
             return []
     
-    def _download_emoji_image(self, emoji_char: str, size: int = 24) -> Path:
-        code = format(ord(emoji_char), 'x')
+    def _download_emoji_image(self, emoji_char: str, size: int = 40) -> Path:
+        """Descarga el emoji como PNG para pegarlo en la imagen."""
+        emoji_map = {
+            "🍎": "1f34e", "🍕": "1f355", "🚗": "1f697", "🚕": "1f695",
+            "🐟": "1f41f", "🐶": "1f436", "⭐": "2b50", "🎈": "1f388",
+            "📚": "1f4da", "🎒": "1f392", "✏️": "270f-fe0f", "📐": "1f4d0",
+            "🖍️": "1f58d-fe0f", "": "1f3c6", "": "1f36a", "": "1f36c",
+            "🌸": "1f338", "👩‍🦰": "1f469-200d-1f9b0",
+            "🍊": "1f34a", "🍇": "1f347", "🍓": "1f353", "🍒": "1f352",
+            "🍑": "1f351", "🍍": "1f34d", "🥝": "1f95d", "🥑": "1f951",
+            "": "1f33a", "": "1f33b", "": "1f337",
+            "🐱": "1f431", "🐰": "1f430", "🐻": "1f43b", "🐼": "1f43c",
+            "🦊": "1f98a", "🦁": "1f981", "🐸": "1f438", "🐦": "1f426",
+            "🦋": "1f98b", "🐞": "1f41e",
+            "🌙": "1f319", "☀️": "2600-fe0f", "": "1f308",
+            "⚽": "26bd", "": "1f3c0", "": "1f3be",
+            "": "1f682", "️": "2708-fe0f", "🚀": "1f680",
+            "⛵": "26f5", "🚢": "1f6a2",
+            "🏠": "1f3e0", "🏡": "1f3e1", "🏫": "1f3eb", "🏥": "1f3e5",
+            "🍔": "1f354", "🍟": "1f35f", "🌭": "1f32d", "🍿": "1f37f",
+            "🧁": "1f9c1", "🎂": "1f382", "🍰": "1f370",
+            "🍫": "1f36b", "🍭": "1f36d", "🍡": "1f361",
+            "": "1f366", "": "1f367", "": "1f368", "": "1f369",
+            "🎃": "1f383", "🎄": "1f384", "🎁": "1f381", "🎀": "1f380",
+            "🎉": "1f389", "🎊": "1f38a",
+        }
+        
+        if emoji_char in emoji_map:
+            code = emoji_map[emoji_char]
+        elif len(emoji_char) == 1:
+            code = format(ord(emoji_char), 'x')
+        else:
+            code = "-".join(f"{ord(c):x}" for c in emoji_char)
+        
         img_path = self.emoji_dir / f"{code}_{size}.png"
         
         if not img_path.exists():
@@ -44,186 +84,113 @@ class PDFGenerator:
                 print(f"⚠️ Error descargando {emoji_char}: {e}")
                 return None
         return img_path if img_path.exists() else None
-    
+
+    def _get_font(self, size: int):
+        """Obtiene una fuente del sistema."""
+        try:
+            return ImageFont.truetype("arial.ttf", size)
+        except IOError:
+            try:
+                return ImageFont.truetype("DejaVuSans.ttf", size)
+            except IOError:
+                return ImageFont.load_default()
+
     def generate_workbook(self, level: int, output_path: Path, lang: str = "es") -> Path:
+        """Genera el cuadernillo como imagen PNG en assets/downloads/."""
         activities = [a for a in self.activities if a["level"] == level]
         if not activities:
             raise ValueError(f"No hay actividades para el nivel {level}")
         
-        pdf = FPDF()
-        pdf.add_page()
+        # Crear lienzo (tamaño similar a A4: 1200 x 1600 px)
+        width, height = 1200, 1600
+        img = Image.new('RGB', (width, height), color=(255, 255, 255))
+        draw = ImageDraw.Draw(img)
         
-        # 1. Encabezado colorido
-        pdf.set_fill_color(255, 223, 0) # Amarillo
-        pdf.rect(0, 0, 210, 40, 'F') # Barra superior
+        font_title = self._get_font(60)
+        font_medium = self._get_font(40)
+        font_eq = self._get_font(45)
+
+        # Encabezado colorido (barra amarilla)
+        draw.rectangle([(0, 0), (width, 120)], fill=(255, 223, 0))
+        title = f"{get_text(lang, 'workbook_title')} {level}"
+        draw.text((width//2, 60), title, fill=(74, 20, 140), font=font_title, anchor="mm")
         
-        pdf.set_font("Helvetica", "B", 22)
-        pdf.set_text_color(74, 20, 140) # Índigo
-        title = get_text(lang, "workbook_title")
-        pdf.cell(0, 15, f"{title} {level}", ln=True, align="C")
-        
-        # Campo para nombre y fecha
-        pdf.set_font("Helvetica", "", 14)
-        pdf.set_text_color(0, 0, 0)
-        pdf.ln(5)
+        # Campos de Nombre y Fecha
         nombre_label = "Nombre:" if lang == "es" else "Name:"
         fecha_label = "Fecha:" if lang == "es" else "Date:"
-        pdf.cell(90, 10, f"{nombre_label} ________________________", ln=False)
-        pdf.cell(0, 10, f"{fecha_label} ________________", ln=True)
+        draw.text((60, 160), f"{nombre_label} ________________________", fill=(0, 0, 0), font=font_medium)
+        draw.text((650, 160), f"{fecha_label} ________________", fill=(0, 0, 0), font=font_medium)
         
-        pdf.ln(10)
-        
-        # 2. Ejercicios
-        pdf.set_font("Helvetica", "B", 16) # Letra más grande para niños
-        for i, activity in enumerate(activities[:8], 1): # 8 ejercicios por página para que queden grandes
-            emoji_char = activity["emoji"]
-            total = activity["total"]
-            operation = activity["operation"]
+        # Dibujar ejercicios
+        y_offset = 260
+        for i, activity in enumerate(activities[:8], 1):
+            emoji_char = activity.get("emoji", "")
+            operation = activity.get("operation", "+")
             
-            emoji_img_path = self._download_emoji_image(emoji_char, size=30) # Emojis más grandes
+            draw.text((60, y_offset), f"{i}.", fill=(0, 0, 0), font=font_medium)
             
-            # Color según operación
-            if operation == "+":
-                pdf.set_text_color(0, 128, 0) # Verde para suma
-            elif operation == "-":
-                pdf.set_text_color(200, 0, 0) # Rojo para resta
-            elif operation == "×":
-                pdf.set_text_color(0, 0, 200) # Azul para multiplicación
-            else:
-                pdf.set_text_color(128, 0, 128) # Morado para división
-            
-            pdf.cell(15, 20, f"{i}.", ln=False)
-            
+            emoji_img_path = self._download_emoji_image(emoji_char, size=50)
             if emoji_img_path:
                 try:
-                    pdf.image(emoji_img_path, x=pdf.get_x(), y=pdf.get_y(), w=15, h=15)
-                    pdf.set_x(pdf.get_x() + 18)
-                except:
-                    pdf.cell(20, 20, " ", ln=False)
-            else:
-                pdf.cell(20, 20, " ", ln=False)
+                    emoji_img = Image.open(emoji_img_path).convert('RGBA')
+                    img.paste(emoji_img, (120, y_offset - 10), emoji_img)
+                except Exception:
+                    pass
             
-            # Ecuación grande
+            eq_x = 200
             if operation == "-":
-                text = f"{total}  -  {activity['remove']}  =  ______"
+                text = f"{activity.get('total')}  -  {activity.get('remove')}  =  ______"
+                color = (200, 0, 0)
             elif operation == "+":
-                text = f"{total}  +  {activity['add']}  =  ______"
+                text = f"{activity.get('total')}  +  {activity.get('add')}  =  ______"
+                color = (0, 128, 0)
             elif operation == "×":
-                text = f"{activity['groups']}  ×  {activity['per_group']}  =  ______"
+                text = f"{activity.get('groups')}  ×  {activity.get('per_group')}  =  ______"
+                color = (0, 0, 200)
             elif operation == "÷":
-                text = f"{total}  ÷  {activity['divisor']}  =  ______"
+                text = f"{activity.get('total')}  ÷  {activity.get('divisor')}  =  ______"
+                color = (128, 0, 128)
+            else:
+                text = "? = ______"
+                color = (0, 0, 0)
             
-            pdf.cell(0, 20, text, ln=True)
-            pdf.ln(5)
-            
-            # Línea separadora suave
-            pdf.set_draw_color(200, 200, 200)
-            pdf.line(20, pdf.get_y(), 190, pdf.get_y())
-            pdf.ln(8)
+            draw.text((eq_x, y_offset + 5), text, fill=color, font=font_eq)
+            draw.line([(60, y_offset + 70), (1140, y_offset + 70)], fill=(200, 200, 200), width=2)
+            y_offset += 130
         
-        # 3. Pie de página divertido
-        pdf.set_y(-20)
-        pdf.set_font("Helvetica", "I", 10)
-        pdf.set_text_color(100, 100, 100)
         footer = get_text(lang, "footer")
-        pdf.cell(0, 10, footer, ln=True, align="C")
+        draw.text((width//2, height - 60), footer, fill=(100, 100, 100), font=self._get_font(30), anchor="mm")
         
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        pdf.output(str(output_path))
-        return output_path
-    
+        # ✅ Guardar en assets/downloads/ para que Flet lo sirva
+        final_path = self.download_dir / output_path.name
+        final_path = final_path.with_suffix('.png')
+        img.save(str(final_path), "PNG", quality=95)
+        print(f"✅ Cuadernillo generado: {final_path}")
+        return final_path
+
     def generate_diploma(self, user_name: str, level: int, stars: int, output_path: Path, lang: str = "es") -> Path:
-        """Genera un diploma de reconocimiento en PDF con soporte bilingüe."""
-        from core.translations import get_text
-        from datetime import datetime
+        """Genera diploma como imagen PNG en assets/downloads/."""
+        width, height = 1600, 1200
+        img = Image.new('RGB', (width, height), color=(255, 255, 255))
+        draw = ImageDraw.Draw(img)
         
-        pdf = FPDF(orientation="L", format="A4")
-        pdf.add_page()
+        draw.rectangle([(20, 20), (width-20, height-20)], outline=(255, 215, 0), width=8)
+        draw.rectangle([(40, 40), (width-40, height-40)], outline=(255, 215, 0), width=3)
         
-        # ===== BORDE DECORATIVO =====
-        pdf.set_draw_color(255, 215, 0)  # Dorado
-        pdf.set_line_width(3)
-        pdf.rect(10, 10, 277, 190)
-        pdf.set_line_width(1)
-        pdf.rect(15, 15, 267, 180)
+        font_title = self._get_font(80)
+        font_name = self._get_font(70)
+        font_text = self._get_font(45)
         
-        # ===== EMOJIS COMO IMÁGENES (no como texto) =====
-        medal_img = self._download_emoji_image("🏅", size=80)
-        star_img = self._download_emoji_image("⭐", size=60)
+        draw.text((width//2, 150), get_text(lang, "diploma_title"), fill=(74, 20, 140), font=font_title, anchor="mm")
+        draw.text((width//2, 280), get_text(lang, "diploma_subtitle"), fill=(0, 0, 0), font=font_text, anchor="mm")
+        draw.text((width//2, 450), user_name.upper(), fill=(0, 100, 0), font=font_name, anchor="mm")
         
-        if medal_img:
-            try:
-                pdf.image(medal_img, x=235, y=20, w=35, h=35)
-            except Exception as e:
-                print(f"⚠️ No se pudo insertar medalla: {e}")
-        
-        if star_img:
-            try:
-                pdf.image(star_img, x=20, y=25, w=30, h=30)
-            except Exception as e:
-                print(f"️ No se pudo insertar estrella: {e}")
-        
-        # ===== TÍTULO =====
-        pdf.set_font("Helvetica", "B", 36)
-        pdf.set_text_color(74, 20, 140)  # Índigo
-        pdf.cell(0, 35, get_text(lang, "diploma_title"), ln=True, align="C")
-        
-        # ===== SUBTÍTULO =====
-        pdf.set_font("Helvetica", "I", 16)
-        pdf.set_text_color(0, 0, 0)
-        pdf.cell(0, 15, get_text(lang, "diploma_subtitle"), ln=True, align="C")
-        
-        # ===== NOMBRE DEL NIÑO =====
-        pdf.set_font("Helvetica", "B", 28)
-        pdf.set_text_color(0, 100, 0)  # Verde
-        pdf.cell(0, 25, user_name.upper(), ln=True, align="C")
-        
-        # ===== LOGRO (SIN EMOJIS EN TEXTO) =====
-        pdf.set_font("Helvetica", "", 16)
-        pdf.set_text_color(0, 0, 0)
         stars_text = get_text(lang, "stars_text")
+        achievement = f"{get_text(lang, 'completed_level')} {level}\n{get_text(lang, 'with_grade')} {stars} {stars_text}."
+        draw.multiline_text((width//2, 650), achievement, fill=(0, 0, 0), font=font_text, anchor="mm", align="center")
         
-        # Construir texto sin emojis
-        achievement_text = f"{get_text(lang, 'completed_level')} {level}\n{get_text(lang, 'with_grade')} {stars} {stars_text}."
-        
-        pdf.multi_cell(0, 10, achievement_text, align="C")
-        
-        # Pequeña medalla como imagen (no emoji en texto)
-        small_medal = self._download_emoji_image("🏅", size=30)
-        if small_medal:
-            try:
-                x_medal = (297 - 15) / 2
-                y_medal = pdf.get_y() + 5
-                pdf.image(small_medal, x=x_medal, y=y_medal, w=15, h=15)
-            except:
-                pass
-        
-        # ===== FECHA =====
-        pdf.ln(8)
-        pdf.set_font("Helvetica", "I", 12)
-        if lang == "es":
-            fecha = datetime.now().strftime("%d de %B de %Y")
-        else:
-            fecha = datetime.now().strftime("%B %d, %Y")
-        pdf.cell(0, 10, f"{get_text(lang, 'date')}: {fecha}", ln=True, align="C")
-        
-        # ===== LÍNEA DE FIRMA =====
-        pdf.ln(12)
-        pdf.set_draw_color(0, 0, 0)
-        pdf.line(80, 160, 180, 160)
-        pdf.set_font("Helvetica", "B", 12)
-        pdf.cell(0, 10, get_text(lang, "teacher_signature"), ln=True, align="C")
-        
-        # ===== FOOTER (SIN EMOJIS - SOLO TEXTO) =====
-        pdf.set_y(-15)
-        pdf.set_font("Helvetica", "I", 10)
-        pdf.set_text_color(100, 100, 100)
-        # Versión sin emojis del footer
-        footer_text = f"Generated by MateKids - Learning is Fun!" if lang == "en" else "Generado por MateKids - ¡Aprender es divertido!"
-        pdf.cell(0, 10, footer_text, ln=True, align="C")
-        
-        # ===== GUARDAR =====
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        pdf.output(str(output_path))
-        print(f"✅ Diploma generado: {output_path}")
-        return output_path
+        final_path = self.download_dir / output_path.name
+        final_path = final_path.with_suffix('.png')
+        img.save(str(final_path), "PNG", quality=95)
+        print(f"✅ Diploma generado: {final_path}")
+        return final_path
