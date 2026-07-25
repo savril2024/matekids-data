@@ -188,11 +188,11 @@ def main(page: ft.Page):
             # 2. URL relativa que Flet sirve automáticamente desde la carpeta assets/
             download_url = f"/assets/downloads/{filename}"
             
-            # 3. ✅ Método oficial de Flet para abrir/descargar archivos (abre en nueva pestaña)
-            page.launch_url(download_url)
+            # 3. ✅ Usar page.run_task para ejecutar la coroutine de launch_url
+            page.run_task(page.launch_url, download_url)
             
             # 4. Mostrar mensaje de éxito
-            pdf_status.value = f"✅ ¡Listo! Se abrió: {filename} (Guárdalo con Ctrl+S o mantén presionado en móvil)"
+            pdf_status.value = f"✅ ¡Listo! Abriendo: {filename}"
             pdf_status.color = ft.Colors.GREEN
             page.update()
             
@@ -264,10 +264,11 @@ def main(page: ft.Page):
         page.update()
         
         # Intentar cerrar la ventana (funciona perfecto en Desktop, en Web depende del navegador)
+        # ✅ Usar page.run_task para la coroutine window.close()
         try:
-            page.window.close()
+            page.run_task(page.window.close)
         except Exception:
-            pass
+            pass  # En web, el navegador a veces bloquea el cierre automático
 
     exit_btn = rounded_button(
         "Salir de la App", 
@@ -345,25 +346,39 @@ def main(page: ft.Page):
     result_title = ft.Text("", size=38, weight=ft.FontWeight.BOLD)
     result_msg = ft.Text("", size=24)
     diploma_status = ft.Text("", size=14, color=ft.Colors.GREEN, italic=True)
-
-    def generate_diploma_action(e):
+    async def generate_diploma_action(e):
+        # """Genera y descarga el diploma como PNG."""
         try:
+            from core.pdf_generator import PDFGenerator
             generator = PDFGenerator(ACTIVITIES_FILE, BASE_DIR)
+            
             safe_name = current_user["name"].replace(" ", "_").lower()
-            output_path = BASE_DIR / "data" / f"diploma_nivel_{current_level}_{safe_name}_{current_lang}.pdf"
-            generator.generate_diploma(
+            output_path = BASE_DIR / "data" / f"diploma_nivel_{current_level}_{safe_name}_{current_lang}.png"
+            
+            generated_path = generator.generate_diploma(
                 user_name=current_user["name"],
                 level=current_level,
                 stars=score,
                 output_path=output_path,
                 lang=current_lang
             )
-            diploma_status.value = f"{get_text(current_lang, 'diploma_saved')} {output_path.name}!"
+            
+            filename = generated_path.name
+            download_url = f"/assets/downloads/{filename}"
+            
+            # ✅ Usar page.run_task para la coroutine
+            page.run_task(page.launch_url, download_url)
+            
+            diploma_status.value = f"✅ ¡Diploma listo! Abriendo: {filename}"
+            diploma_status.color = ft.Colors.GREEN
             page.update()
+            
         except Exception as ex:
-            diploma_status.value = f"{get_text(current_lang, 'diploma_error')}: {ex}"
-            page.update()
-
+            diploma_status.value = f"❌ Error: {ex}"
+            diploma_status.color = ft.Colors.RED
+            page.update() 
+        
+    #HASTA AQUI DIPLOMA
     result_view = ft.Column([
         result_title, 
         result_msg,
