@@ -174,35 +174,33 @@ def main(page: ft.Page):
     #         page.update()
 
     def generate_pdf(e):
+       # Genera y descarga el cuadernillo como PNG.
         try:
+            from core.pdf_generator import PDFGenerator
+            
             generator = PDFGenerator(ACTIVITIES_FILE, BASE_DIR)
             output_path = BASE_DIR / "data" / f"cuadernillo_nivel_{current_level}_{current_lang}.png"
-            generated_path = generator.generate_workbook(current_level, output_path, current_lang)
             
-            # ✅ Forzar descarga en el navegador
+            # 1. Generar el archivo en assets/downloads/
+            generated_path = generator.generate_workbook(current_level, output_path, current_lang)
             filename = generated_path.name
+            
+            # 2. URL relativa que Flet sirve automáticamente desde la carpeta assets/
             download_url = f"/assets/downloads/{filename}"
             
-            # Usar JavaScript para forzar la descarga con atributo 'download'
-            js_code = f"""
-            (function() {{
-                const link = document.createElement('a');
-                link.href = '{download_url}';
-                link.download = '{filename}';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }})();
-            """
+            # 3. ✅ Método oficial de Flet para abrir/descargar archivos (abre en nueva pestaña)
+            page.launch_url(download_url)
             
-            if hasattr(page, 'run_js'):
-                page.run_js(js_code)
-            
-            pdf_status.value = f"✅ Descarga iniciada: {filename}"
+            # 4. Mostrar mensaje de éxito
+            pdf_status.value = f"✅ ¡Listo! Se abrió: {filename} (Guárdalo con Ctrl+S o mantén presionado en móvil)"
+            pdf_status.color = ft.Colors.GREEN
             page.update()
+            
         except Exception as ex:
             pdf_status.value = f"❌ Error: {ex}"
-            page.update()        
+            pdf_status.color = ft.Colors.RED
+            page.update()
+            print(f"ERROR en generate_pdf: {ex}")      
     ##hasta aqui    
 
     def toggle_home_language(e):
