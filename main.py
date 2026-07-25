@@ -177,17 +177,6 @@ def main(page: ft.Page):
         try:
             generator = PDFGenerator(ACTIVITIES_FILE, BASE_DIR)
             output_path = BASE_DIR / "data" / f"cuadernillo_nivel_{current_level}_{current_lang}.png"
-            generator.generate_workbook(current_level, output_path, current_lang)
-            pdf_status.value = f"✅ Imagen guardada: {output_path.name}"
-            page.update()
-        except Exception as ex:
-            pdf_status.value = f"❌ Error: {ex}"
-            page.update()
-
-    def generate_pdf(e):
-        try:
-            generator = PDFGenerator(ACTIVITIES_FILE, BASE_DIR)
-            output_path = BASE_DIR / "data" / f"cuadernillo_nivel_{current_level}_{current_lang}.png"
             generated_path = generator.generate_workbook(current_level, output_path, current_lang)
             
             # ✅ Forzar descarga en el navegador
