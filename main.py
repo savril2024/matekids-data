@@ -416,7 +416,7 @@ if __name__ == "__main__":
     
     ft.run(
         main,
-        host="127.0.0.1",
+        host="0.0.0.0",
         port=port,
         view="web_browser",
         assets_dir="assets"
