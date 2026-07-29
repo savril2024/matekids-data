@@ -4,6 +4,8 @@ import json
 import random
 from pathlib import Path
 
+from rich import inspect
+
 from core.engine import ActivityEngine
 from core import users
 from core.pdf_generator import PDFGenerator
@@ -13,8 +15,8 @@ BASE_DIR = Path(__file__).resolve().parent
 ACTIVITIES_FILE = BASE_DIR / "data" / "activities.json"
 
 print(f"🚀 VERSIÓN DE FLET: {ft.__version__}")
-print(inspect.signature(ft.Page.launch_url))
-print(inspect.signature(ft.UrlLauncher.launch_url))
+print(ft.Page.launch_url)
+print(ft.UrlLauncher.launch_url)
 
 def load_activities() -> list:
     if not ACTIVITIES_FILE.exists():
