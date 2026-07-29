@@ -4,7 +4,7 @@ import json
 import random
 from pathlib import Path
 
-from rich import inspect
+#from rich import inspect
 
 from core.engine import ActivityEngine
 from core import users
