@@ -8,6 +8,7 @@ from core.engine import ActivityEngine
 from core import users
 from core.pdf_generator import PDFGenerator
 from core.translations import get_text
+from core.platform import get_platform
 
 BASE_DIR = Path(__file__).resolve().parent
 ACTIVITIES_FILE = BASE_DIR / "data" / "activities.json"
@@ -191,17 +192,15 @@ def main(page: ft.Page):
             # 2. URL relativa que Flet sirve automáticamente desde la carpeta assets/
             download_url = f"/downloads/{filename}"
             print(f"Intentando descargar: {download_url}") # Para verificar en los logs de R
-            # 3. ✅ FORMA MODERNA Y ESTABLE: Usar UrlLauncher
-            # launcher = ft.UrlLauncher()
-            # await launcher.launch_url(download_url, web_popup_window=True)
-            url = f"/downloads/{filename}"
-            page.launch_url(url)
+            # ✅ USAR LA CAPA DE PLATAFORMA
+            platform = get_platform(page, current_lang)
+            success = await platform.download_file(download_url, filename)
 
-            
             # 4. Mostrar mensaje de éxito
-            pdf_status.value = f"✅ ¡Listo! Abriendo: {filename}"
-            pdf_status.color = ft.Colors.GREEN
+            pdf_status.value = "✅ ¡Descarga iniciada!" if success else "⚠️ Abre la imagen en nueva pestaña"
+            pdf_status.color = ft.Colors.GREEN if success else ft.Colors.ORANGE
             page.update()
+    
             
         except Exception as ex:
             pdf_status.value = f"❌ Error: {ex}"
@@ -375,17 +374,14 @@ def main(page: ft.Page):
             download_url = f"/downloads/{filename}"
             print("Descargando:", download_url)
 
-            # 3. ✅ FORMA MODERNA Y ESTABLE: Usar UrlLauncher
-           # launcher = ft.UrlLauncher()
-            url = f"/downloads/{filename}"
-            #await launcher.launch_url(download_url, web_popup_window=True)
-            page.launch_url(url)
-
-            # 4. Mostrar mensaje de éxito
-            diploma_status.value = f"✅ ¡Diploma listo! Abriendo: {filename}"
-            diploma_status.color = ft.Colors.GREEN
-            page.update()
+            # ✅ USAR LA CAPA DE PLATAFORMA
+            platform = get_platform(page, current_lang)
+            success = await platform.download_file(download_url, filename)
             
+            diploma_status.value = "✅ ¡Diploma descargado!" if success else "⚠️ Abre el diploma en nueva pestaña"
+            diploma_status.color = ft.Colors.GREEN if success else ft.Colors.ORANGE
+            page.update()
+                
         except Exception as ex:
             diploma_status.value = f"❌ Error: {ex}"
             diploma_status.color = ft.Colors.RED
