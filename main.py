@@ -2,10 +2,8 @@ import asyncio
 import flet as ft
 import json
 import random
+import inspect
 from pathlib import Path
-
-#from rich import inspect
-
 from core.engine import ActivityEngine
 from core import users
 from core.pdf_generator import PDFGenerator
@@ -14,9 +12,14 @@ from core.translations import get_text
 BASE_DIR = Path(__file__).resolve().parent
 ACTIVITIES_FILE = BASE_DIR / "data" / "activities.json"
 
-print(f"🚀 VERSIÓN DE FLET: {ft.__version__}")
-print(ft.Page.launch_url)
-print(ft.UrlLauncher.launch_url)
+print(f"VERSIÓN DE FLET: {ft.__version__}")
+print("Flet:", ft.__version__)
+
+print("Page.launch_url:")
+print(inspect.signature(ft.Page.launch_url))
+
+print("UrlLauncher.launch_url:")
+print(inspect.signature(ft.UrlLauncher.launch_url))
 
 def load_activities() -> list:
     if not ACTIVITIES_FILE.exists():
