@@ -182,9 +182,10 @@ def main(page: ft.Page):
             
             # 2. URL relativa que Flet sirve automáticamente desde la carpeta assets/
             download_url = f"/assets/downloads/{filename}"
-            print("Descargando:", download_url)
-            # 3. ✅ CORREGIDO: Usar await directamente (la función ahora es async)
-            await page.launch_url(download_url)
+            print(f"Intentando descargar: {download_url}") # Para verificar en los logs de R
+            # 3. ✅ FORMA MODERNA Y ESTABLE: Usar UrlLauncher
+            launcher = ft.UrlLauncher()
+            await launcher.launch_url(download_url)
 
             
             # 4. Mostrar mensaje de éxito
@@ -364,8 +365,10 @@ def main(page: ft.Page):
             download_url = f"/assets/downloads/{filename}"
             print("Descargando:", download_url)
 
-            # 3. ✅ CORREGIDO: Usar await directamente
-            await page.launch_url(download_url)
+            # 3. ✅ FORMA MODERNA Y ESTABLE: Usar UrlLauncher
+            launcher = ft.UrlLauncher()
+            await launcher.launch_url(download_url)
+            
             # 4. Mostrar mensaje de éxito
             diploma_status.value = f"✅ ¡Diploma listo! Abriendo: {filename}"
             diploma_status.color = ft.Colors.GREEN
