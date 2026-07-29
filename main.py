@@ -181,10 +181,10 @@ def main(page: ft.Page):
             filename = generated_path.name
             
             # 2. URL relativa que Flet sirve automáticamente desde la carpeta assets/
-            download_url = f"/downloads/{filename}"
+            download_url = f"/assets/downloads/{filename}"
             print("Descargando:", download_url)
             # 3. ✅ Usar page.run_task para ejecutar la coroutine de launch_url
-            page.launch_url(download_url)
+            page.run_task(page.launch_url, download_url)
 
             
             # 4. Mostrar mensaje de éxito
@@ -361,11 +361,11 @@ def main(page: ft.Page):
             
             filename = generated_path.name
              # 2. URL relativa que Flet sirve automáticamente desde la carpeta assets/
-            download_url = f"/downloads/{filename}"
+            download_url = f"/assets/downloads/{filename}"
             print("Descargando:", download_url)
 
-            # ✅ Usar page.run_task para la coroutine
-            page.launch_url(download_url)
+            # 3. ✅ Usar page.run_task para la coroutine
+            download_url = f"/assets/downloads/{filename}"
             # 4. Mostrar mensaje de éxito
             diploma_status.value = f"✅ ¡Diploma listo! Abriendo: {filename}"
             diploma_status.color = ft.Colors.GREEN
