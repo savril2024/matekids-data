@@ -2,12 +2,13 @@
 """
 core/engine.py
 COORDINADOR PRINCIPAL.
+Usa SpeechService factory para seleccionar implementación automáticamente.
 """
 import asyncio
 import flet as ft
 from core.game_logic import GameLogic
 from core.narrator import Narrator
-from core.speech import SpeechService
+from core.speech import SpeechService, create_speech_service
 from core.number_parser import text_to_number
 from core.visual_renderer import VisualRenderer
 from core.animator import Animator
@@ -30,8 +31,20 @@ class ActivityEngine:
         
         self.narrator = Narrator(lang=lang, on_text=self._show_subtitle)
         self.narrator.set_page(page)
+
+        # ✅ NUEVO: Usar factory para crear el servicio de voz
+        self.speech_service = create_speech_service(page, lang)
+        self.speech_service.on_result = self._on_voice_result
+        self.speech_service.on_error = self._on_voice_error
+        self.speech_service.on_timeout = self._on_voice_timeout
         
-        self.speech_service = SpeechService(page, lang=lang)
+        self.subtitle = ft.Text("", size=26, italic=True, color=ft.Colors.BLUE_GREY_700, 
+                                text_align=ft.TextAlign.CENTER, width=600)
+        self.objects_view = ft.Column(wrap=False, spacing=8, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
+        self.feedback = ft.Text("", size=36, weight=ft.FontWeight.BOLD)
+        self.confetti_layer = ft.Stack(expand=True)
+
+        self.speech_service = create_speech_service(page, lang=lang)
         self.speech_service.on_result = self._on_voice_result
         self.speech_service.on_error = self._on_voice_error
         self.speech_service.on_timeout = self._on_voice_timeout

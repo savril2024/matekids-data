@@ -162,34 +162,30 @@ def main(page: ft.Page):
         activities_done = 0
         show_game()
 
-    # def generate_pdf(e):
-    #     try:
-    #         generator = PDFGenerator(ACTIVITIES_FILE, BASE_DIR)
-    #         output_path = BASE_DIR / "data" / f"cuadernillo_nivel_{current_level}_{current_lang}.pdf"
-    #         generator.generate_workbook(current_level, output_path, current_lang)
-    #         pdf_status.value = f"{get_text(current_lang, 'pdf_saved')} {output_path.name}"
-    #         page.update()
-    #     except Exception as ex:
-    #         pdf_status.value = f"{get_text(current_lang, 'pdf_error')}: {ex}"
-    #         page.update()
-
+    
     def generate_pdf(e):
        # Genera y descarga el cuadernillo como PNG.
         try:
             from core.pdf_generator import PDFGenerator
             
             generator = PDFGenerator(ACTIVITIES_FILE, BASE_DIR)
-            output_path = BASE_DIR / "data" / f"cuadernillo_nivel_{current_level}_{current_lang}.png"
+            output_path = (
+            BASE_DIR
+            / "data"
+            / f"cuadernillo_nivel_{current_level}_{current_lang}.png"
+            )
+
             
             # 1. Generar el archivo en assets/downloads/
             generated_path = generator.generate_workbook(current_level, output_path, current_lang)
             filename = generated_path.name
             
             # 2. URL relativa que Flet sirve automáticamente desde la carpeta assets/
-            download_url = f"/assets/downloads/{filename}"
-            
+            download_url = f"/downloads/{filename}"
+            print("Descargando:", download_url)
             # 3. ✅ Usar page.run_task para ejecutar la coroutine de launch_url
-            page.run_task(page.launch_url, download_url)
+            page.launch_url(download_url)
+
             
             # 4. Mostrar mensaje de éxito
             pdf_status.value = f"✅ ¡Listo! Abriendo: {filename}"
@@ -354,7 +350,7 @@ def main(page: ft.Page):
             
             safe_name = current_user["name"].replace(" ", "_").lower()
             output_path = BASE_DIR / "data" / f"diploma_nivel_{current_level}_{safe_name}_{current_lang}.png"
-            
+            # 1. Generar el archivo en assets/downloads/
             generated_path = generator.generate_diploma(
                 user_name=current_user["name"],
                 level=current_level,
@@ -364,11 +360,13 @@ def main(page: ft.Page):
             )
             
             filename = generated_path.name
-            download_url = f"/assets/downloads/{filename}"
-            
+             # 2. URL relativa que Flet sirve automáticamente desde la carpeta assets/
+            download_url = f"/downloads/{filename}"
+            print("Descargando:", download_url)
+
             # ✅ Usar page.run_task para la coroutine
-            page.run_task(page.launch_url, download_url)
-            
+            page.launch_url(download_url)
+            # 4. Mostrar mensaje de éxito
             diploma_status.value = f"✅ ¡Diploma listo! Abriendo: {filename}"
             diploma_status.color = ft.Colors.GREEN
             page.update()

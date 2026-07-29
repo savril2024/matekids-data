@@ -10,6 +10,8 @@ import os
 import requests
 import io
 from datetime import datetime
+#from core.paths import DOWNLOADS_DIR
+
 
 from core.translations import get_text
 
@@ -167,30 +169,129 @@ class PDFGenerator:
         img.save(str(final_path), "PNG", quality=95)
         print(f"✅ Cuadernillo generado: {final_path}")
         return final_path
-
+    
     def generate_diploma(self, user_name: str, level: int, stars: int, output_path: Path, lang: str = "es") -> Path:
-        """Genera diploma como imagen PNG en assets/downloads/."""
-        width, height = 1600, 1200
-        img = Image.new('RGB', (width, height), color=(255, 255, 255))
+        """Genera un diploma festivo como imagen PNG de alta calidad con emojis a color."""
+        width, height = 1600, 1200  # Formato horizontal (Landscape)
+        
+        # Fondo color crema suave para que sea cálido y amigable
+        img = Image.new('RGB', (width, height), color=(255, 253, 230))
         draw = ImageDraw.Draw(img)
         
-        draw.rectangle([(20, 20), (width-20, height-20)], outline=(255, 215, 0), width=8)
-        draw.rectangle([(40, 40), (width-40, height-40)], outline=(255, 215, 0), width=3)
+        # 1. Borde decorativo dorado doble
+        draw.rectangle([(30, 30), (width-30, height-30)], outline=(255, 215, 0), width=12)
+        draw.rectangle([(50, 50), (width-50, height-50)], outline=(255, 215, 0), width=4)
         
-        font_title = self._get_font(80)
-        font_name = self._get_font(70)
-        font_text = self._get_font(45)
+        # Esquinas decorativas (círculos dorados)
+        corners = [(50, 50), (width-50, 50), (50, height-50), (width-50, height-50)]
+        for cx, cy in corners:
+            draw.ellipse([(cx-20, cy-20), (cx+20, cy+20)], fill=(255, 215, 0))
         
-        draw.text((width//2, 150), get_text(lang, "diploma_title"), fill=(74, 20, 140), font=font_title, anchor="mm")
-        draw.text((width//2, 280), get_text(lang, "diploma_subtitle"), fill=(0, 0, 0), font=font_text, anchor="mm")
-        draw.text((width//2, 450), user_name.upper(), fill=(0, 100, 0), font=font_name, anchor="mm")
+        # 2. Fuentes
+        font_title = self._get_font(70)
+        font_subtitle = self._get_font(35)
+        font_name = self._get_font(80)
+        font_text = self._get_font(40)
+        font_footer = self._get_font(30)
         
-        stars_text = get_text(lang, "stars_text")
-        achievement = f"{get_text(lang, 'completed_level')} {level}\n{get_text(lang, 'with_grade')} {stars} {stars_text}."
-        draw.multiline_text((width//2, 650), achievement, fill=(0, 0, 0), font=font_text, anchor="mm", align="center")
+        # 3. Emoji grande de Trofeo o Medalla en la parte superior
+        trophy_path = self._download_emoji_image("🏆", size=120)
+        if trophy_path:
+            try:
+                trophy_img = Image.open(trophy_path).convert('RGBA')
+                # Centrar en la parte superior
+                trophy_x = (width - 120) // 2
+                img.paste(trophy_img, (trophy_x, 70), trophy_img)
+            except Exception:
+                pass
         
-        final_path = self.download_dir / output_path.name
-        final_path = final_path.with_suffix('.png')
+        # 4. Títulos
+        title_text = get_text(lang, "diploma_title").upper()
+        draw.text((width//2, 220), title_text, fill=(74, 20, 140), font=font_title, anchor="mm")
+        
+        subtitle_text = get_text(lang, "diploma_subtitle")
+        draw.text((width//2, 300), subtitle_text, fill=(80, 80, 80), font=font_subtitle, anchor="mm")
+        
+        # 5. Nombre del niño/a (grande y destacado)
+        draw.text((width//2, 420), user_name.upper(), fill=(220, 50, 50), font=font_name, anchor="mm")
+        
+        # Línea decorativa bajo el nombre
+        draw.line([(width//2 - 200, 460), (width//2 + 200, 460)], fill=(255, 215, 0), width=6)
+        
+        # 6. Texto de logro con ESTRELLAS A COLOR
+        level_text = get_text(lang, "completed_level")
+        grade_text = get_text(lang, "with_grade")
+        
+        achievement_line1 = f"{level_text} {level}"
+        
+        draw.text((width//2, 550), achievement_line1, fill=(0, 0, 0), font=font_text, anchor="mm")
+        draw.text((width//2, 600), grade_text, fill=(0, 0, 0), font=font_text, anchor="mm")
+        
+        # Dibujar estrellas como imágenes para que aparezcan correctamente
+        star_img_path = self._download_emoji_image("⭐", size=50)
+        if star_img_path:
+            try:
+                star_img = Image.open(star_img_path).convert('RGBA')
+                # Posicionar las estrellas horizontalmente centradas
+                star_x_start = (width - (stars * 55)) // 2
+                for i in range(stars):
+                    img.paste(star_img, (star_x_start + i * 55, 650), star_img)
+            except Exception:
+                pass
+        
+        # 7. Fecha
+        if lang == "es":
+            fecha = datetime.now().strftime("%d de %B de %Y")
+        else:
+            fecha = datetime.now().strftime("%B %d, %Y")
+        draw.text((width//2, 750), f"{get_text(lang, 'date')}: {fecha}", fill=(100, 100, 100), font=font_footer, anchor="mm")
+        
+        # 8. Línea de firma
+        draw.line([(width//2 - 150, 850), (width//2 + 150, 850)], fill=(0, 0, 0), width=3)
+        draw.text((width//2, 900), get_text(lang, "teacher_signature"), fill=(0, 0, 0), font=font_footer, anchor="mm")
+        
+        # 9. Emoji pequeño de celebración en la esquina inferior
+        party_path = self._download_emoji_image("🎉", size=60)
+        if party_path:
+            try:
+                party_img = Image.open(party_path).convert('RGBA')
+                img.paste(party_img, (80, height - 100), party_img)
+                
+                # Otro emoji al otro lado
+                party_img2 = Image.open(party_path).convert('RGBA')
+                img.paste(party_img2, (width - 140, height - 100), party_img2)
+            except Exception:
+                pass
+        
+        # 10. Guardar como PNG de alta calidad
+        final_path = self.download_dir / f"diploma_{user_name.replace(' ', '_').lower()}_nivel_{level}_{lang}.png"
         img.save(str(final_path), "PNG", quality=95)
-        print(f"✅ Diploma generado: {final_path}")
+        print(f"✅ Diploma festivo generado: {final_path}")
         return final_path
+
+    # def generate_diploma(self, user_name: str, level: int, stars: int, output_path: Path, lang: str = "es") -> Path:
+    #     """Genera diploma como imagen PNG en assets/downloads/."""
+    #     width, height = 1600, 1200
+    #     img = Image.new('RGB', (width, height), color=(255, 255, 255))
+    #     draw = ImageDraw.Draw(img)
+        
+    #     draw.rectangle([(20, 20), (width-20, height-20)], outline=(255, 215, 0), width=8)
+    #     draw.rectangle([(40, 40), (width-40, height-40)], outline=(255, 215, 0), width=3)
+        
+    #     font_title = self._get_font(80)
+    #     font_name = self._get_font(70)
+    #     font_text = self._get_font(45)
+        
+    #     draw.text((width//2, 150), get_text(lang, "diploma_title"), fill=(74, 20, 140), font=font_title, anchor="mm")
+    #     draw.text((width//2, 280), get_text(lang, "diploma_subtitle"), fill=(0, 0, 0), font=font_text, anchor="mm")
+    #     draw.text((width//2, 450), user_name.upper(), fill=(0, 100, 0), font=font_name, anchor="mm")
+        
+    #     stars_text = get_text(lang, "stars_text")
+    #     achievement = f"{get_text(lang, 'completed_level')} {level}\n{get_text(lang, 'with_grade')} {stars} {stars_text}."
+    #     draw.multiline_text((width//2, 650), achievement, fill=(0, 0, 0), font=font_text, anchor="mm", align="center")
+        
+    #     final_path = self.download_dir / output_path.name
+    #     final_path = final_path.with_suffix('.png')
+    #     img.save(str(final_path), "PNG", quality=95)
+    #     print(f"✅ Diploma generado: {final_path}")
+    #     return final_path
