@@ -185,7 +185,7 @@ def main(page: ft.Page):
             print(f"Intentando descargar: {download_url}") # Para verificar en los logs de R
             # 3. ✅ FORMA MODERNA Y ESTABLE: Usar UrlLauncher
             launcher = ft.UrlLauncher()
-            await launcher.launch_url(download_url)
+            await launcher.launch_url(download_url, web_popup_window=True)
 
             
             # 4. Mostrar mensaje de éxito
@@ -367,8 +367,8 @@ def main(page: ft.Page):
 
             # 3. ✅ FORMA MODERNA Y ESTABLE: Usar UrlLauncher
             launcher = ft.UrlLauncher()
-            await launcher.launch_url(download_url)
-            
+            await launcher.launch_url(download_url, web_popup_window=True)
+
             # 4. Mostrar mensaje de éxito
             diploma_status.value = f"✅ ¡Diploma listo! Abriendo: {filename}"
             diploma_status.color = ft.Colors.GREEN
