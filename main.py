@@ -163,7 +163,7 @@ def main(page: ft.Page):
         show_game()
 
     
-    def generate_pdf(e):
+    async def generate_pdf(e):
        # Genera y descarga el cuadernillo como PNG.
         try:
             from core.pdf_generator import PDFGenerator
@@ -183,8 +183,8 @@ def main(page: ft.Page):
             # 2. URL relativa que Flet sirve automáticamente desde la carpeta assets/
             download_url = f"/assets/downloads/{filename}"
             print("Descargando:", download_url)
-            # 3. ✅ Usar page.run_task para ejecutar la coroutine de launch_url
-            page.run_task(page.launch_url, download_url)
+            # 3. ✅ CORREGIDO: Usar await directamente (la función ahora es async)
+            await page.launch_url(download_url)
 
             
             # 4. Mostrar mensaje de éxito
@@ -364,8 +364,8 @@ def main(page: ft.Page):
             download_url = f"/assets/downloads/{filename}"
             print("Descargando:", download_url)
 
-            # 3. ✅ Usar page.run_task para la coroutine
-            download_url = f"/assets/downloads/{filename}"
+            # 3. ✅ CORREGIDO: Usar await directamente
+            await page.launch_url(download_url)
             # 4. Mostrar mensaje de éxito
             diploma_status.value = f"✅ ¡Diploma listo! Abriendo: {filename}"
             diploma_status.color = ft.Colors.GREEN
