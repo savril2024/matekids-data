@@ -12,6 +12,9 @@ from core.translations import get_text
 BASE_DIR = Path(__file__).resolve().parent
 ACTIVITIES_FILE = BASE_DIR / "data" / "activities.json"
 
+print(f"🚀 VERSIÓN DE FLET: {ft.__version__}")
+print(inspect.signature(ft.Page.launch_url))
+print(inspect.signature(ft.UrlLauncher.launch_url))
 
 def load_activities() -> list:
     if not ACTIVITIES_FILE.exists():
@@ -181,11 +184,13 @@ def main(page: ft.Page):
             filename = generated_path.name
             
             # 2. URL relativa que Flet sirve automáticamente desde la carpeta assets/
-            download_url = f"/assets/downloads/{filename}"
+            download_url = f"/downloads/{filename}"
             print(f"Intentando descargar: {download_url}") # Para verificar en los logs de R
             # 3. ✅ FORMA MODERNA Y ESTABLE: Usar UrlLauncher
-            launcher = ft.UrlLauncher()
-            await launcher.launch_url(download_url, web_popup_window=True)
+            # launcher = ft.UrlLauncher()
+            # await launcher.launch_url(download_url, web_popup_window=True)
+            url = f"/downloads/{filename}"
+            page.launch_url(url)
 
             
             # 4. Mostrar mensaje de éxito
@@ -362,12 +367,14 @@ def main(page: ft.Page):
             
             filename = generated_path.name
              # 2. URL relativa que Flet sirve automáticamente desde la carpeta assets/
-            download_url = f"/assets/downloads/{filename}"
+            download_url = f"/downloads/{filename}"
             print("Descargando:", download_url)
 
             # 3. ✅ FORMA MODERNA Y ESTABLE: Usar UrlLauncher
-            launcher = ft.UrlLauncher()
-            await launcher.launch_url(download_url, web_popup_window=True)
+           # launcher = ft.UrlLauncher()
+            url = f"/downloads/{filename}"
+            #await launcher.launch_url(download_url, web_popup_window=True)
+            page.launch_url(url)
 
             # 4. Mostrar mensaje de éxito
             diploma_status.value = f"✅ ¡Diploma listo! Abriendo: {filename}"
