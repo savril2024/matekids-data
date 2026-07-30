@@ -151,6 +151,14 @@ class SpeechService:
         if self.on_stop:
             self.on_stop()
 
+    def start_listening(self) -> None:
+        """Versión síncrona de start(). Lanza la escucha en background."""
+        self.page.run_task(self.start)
+
+    def stop_listening(self) -> None:
+        """Versión síncrona de stop(). Detiene la escucha en background."""
+        self.page.run_task(self.stop)
+
 
 def create_speech_service(page: ft.Page, lang: str = "es") -> SpeechService:
     """
