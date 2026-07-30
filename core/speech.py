@@ -16,6 +16,7 @@ class SpeechState:
     IDLE = "idle"
     ERROR = "error"
     NOT_SUPPORTED = "not_supported"
+    TRANSCRIBED = "transcribed"
 
 
 class SpeechService:

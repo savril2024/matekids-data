@@ -140,7 +140,7 @@ class ActivityEngine:
         self.voice_input.visible = not self.voice_input.visible
         self.voice_input.value = ""
         if self.voice_input.visible:
-            self.voice_input.focus() # Enfocar para que el teclado aparezca
+            self.page.run_task(self.voice_input.focus)  # focus() es async en Flet 0.86+
             self.feedback.value = " Toca el micrófono de tu teclado y dicta el número"
             self.feedback.color = ft.Colors.BLUE
             self.speech_service.start_listening()
