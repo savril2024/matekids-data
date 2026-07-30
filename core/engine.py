@@ -43,11 +43,13 @@ class ActivityEngine:
         self.objects_view = ft.Column(wrap=False, spacing=8, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
         self.feedback = ft.Text("", size=36, weight=ft.FontWeight.BOLD)
         self.confetti_layer = ft.Stack(expand=True)
-
+       
         self.speech_service = create_speech_service(page, lang=lang)
         self.speech_service.on_result = self._on_voice_result
         self.speech_service.on_error = self._on_voice_error
         self.speech_service.on_timeout = self._on_voice_timeout
+         # TextField para dictado por voz
+        self.voice_input = self.speech_service.build_voice_input()
 
         self.subtitle = ft.Text(
             "", size=26, weight=ft.FontWeight.NORMAL,
@@ -70,6 +72,9 @@ class ActivityEngine:
                 ft.Container(height=20),
                 self.subtitle,
                 self.feedback,
+                ft.Container(height=10),
+                # TextField de dictado (oculto por defecto, se muestra al tocar micrófono)
+                self.voice_input,
                 ft.Container(height=10),
                 self._build_options(),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, expand=True),
@@ -117,6 +122,7 @@ class ActivityEngine:
         self.objects_view.controls = []
         self.feedback.value = ""
         self.subtitle.value = ""
+        self.voice_input.value = ""  # Limpiar TextField
         self.confetti_layer.controls = []
         self.page.update()
 
@@ -125,9 +131,26 @@ class ActivityEngine:
         # Ocultar botón de micrófono
         if options_control.controls:
             mic_btn = options_control.controls[-1]
-            mic_btn.visible = False
+            mic_btn.on_click = self._toggle_voice_input
+            mic_btn.visible = True
         return options_control
-
+    
+    def _toggle_voice_input(self, e):
+        """Muestra/oculta el TextField de dictado."""
+        self.voice_input.visible = not self.voice_input.visible
+        self.voice_input.value = ""
+        if self.voice_input.visible:
+            self.voice_input.focus() # Enfocar para que el teclado aparezca
+            self.feedback.value = " Toca el micrófono de tu teclado y dicta el número"
+            self.feedback.color = ft.Colors.BLUE
+            self.speech_service.start_listening()
+            self.feedback.value = "Habla ahora..."
+            self.page.update()
+        else:
+            self.speech_service.stop_listening()
+            self.feedback.value = ""
+        self.page.update()
+        
     def _check(self, value: int):
         result = self.logic.check_answer(value)
         if result["is_correct"]:
@@ -136,6 +159,10 @@ class ActivityEngine:
             self.ui_builder.launch_confetti(self.confetti_layer, self.page)
             self.page.run_task(self.ui_builder.clear_confetti, self.confetti_layer, self.page)
             self.page.run_task(self.narrator.speak_and_wait, f"{get_text(self.lang, 'very_good').replace('⭐', '').strip()} {result['correct_answer']}.")
+            # Confirmación por voz en el idioma correcto
+            self.page.run_task(self.speech_service.speak_confirmation, 
+                             get_text(self.lang, "very_good"), 
+                             result["correct_answer"])
             self.on_finish(success=True, stars=1)
         else:
             self.feedback.value = get_text(self.lang, "try_again")
