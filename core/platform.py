@@ -29,20 +29,23 @@ class PlatformContext:
     async def open_url(self, url: str, new_tab: bool = True) -> bool:
         """
         Abre una URL. En Flet 0.86.2:
-        self.page.launch_url(url, web_popup_window_name="_blank", web_popup_window=True)
-        Abre la URL en una nueva pestaña del navegador sin recargar ni salir de la app.
+        self.page.launch_url es un coroutine y debe ser esperado con await.
         """
         try:
             if new_tab:
-                self.page.launch_url(url, web_popup_window_name="_blank", web_popup_window=True)
+                res = self.page.launch_url(url, web_popup_window_name="_blank", web_popup_window=True)
             else:
-                self.page.launch_url(url)
+                res = self.page.launch_url(url)
+            
+            if asyncio.iscoroutine(res):
+                await res
             return True
         except Exception as e:
             print(f"⚠️ open_url falló con page.launch_url: {e}")
             try:
-                # Fallback básico
-                self.page.launch_url(url)
+                res = self.page.launch_url(url)
+                if asyncio.iscoroutine(res):
+                    await res
                 return True
             except Exception as ex2:
                 print(f"⚠️ open_url fallback falló: {ex2}")
