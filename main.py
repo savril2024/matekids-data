@@ -189,9 +189,9 @@ def main(page: ft.Page):
             generated_path = generator.generate_workbook(current_level, output_path, current_lang)
             filename = generated_path.name
             
-            # 2. URL relativa que Flet sirve automáticamente desde la carpeta assets/
+            # 2. URL relativa que Flet sirve automáticamente desde la carpeta assets/ (assets_dir="assets" mapea a /)
             download_url = f"/downloads/{filename}"
-            print(f"Intentando descargar: {download_url}") # Para verificar en los logs de R
+            print(f"Intentando descargar: {download_url}")
             # ✅ USAR LA CAPA DE PLATAFORMA
             platform = get_platform(page, current_lang)
             success = await platform.download_file(download_url, filename)
@@ -370,7 +370,7 @@ def main(page: ft.Page):
             )
             
             filename = generated_path.name
-             # 2. URL relativa que Flet sirve automáticamente desde la carpeta assets/
+             # 2. URL relativa que Flet sirve automáticamente desde la carpeta assets/ (assets_dir="assets" mapea a /)
             download_url = f"/downloads/{filename}"
             print("Descargando:", download_url)
 
